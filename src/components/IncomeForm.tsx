@@ -1,3 +1,4 @@
+import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { X, Calculator, Calendar, Landmark, Clock, Car } from "lucide-react";
@@ -5,7 +6,7 @@ import { IncomeEntry } from "../types";
 
 interface IncomeFormProps {
   entryToEdit: IncomeEntry | null;
-  onSave: (entry: Omit<IncomeEntry, "id"> & { id?: string }) => void;
+  onSave: (entry: Omit<IncomeEntry, "id"> & { id?: string }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -22,6 +23,7 @@ interface FormErrors {
 }
 
 export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeFormProps) {
+  const { submit, isSaving, saveError } = useFormSubmission(onSave);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [trips, setTrips] = useState("");
@@ -178,7 +180,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
 
     if (Object.keys(errors).length > 0) return;
 
-    onSave({
+    void submit({
       id: entryToEdit?.id,
       startDate,
       endDate,
@@ -232,6 +234,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
           </div>
           <button
             onClick={onCancel}
+              disabled={isSaving}
             type="button"
             className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition cursor-pointer"
             id="close-form-btn"
@@ -242,6 +245,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          <fieldset disabled={isSaving} className="contents" aria-busy={isSaving}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Dates */}
@@ -495,11 +499,13 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
             </div>
           </div>
 
+          {saveError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{saveError}</p>}
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onCancel}
+              disabled={isSaving}
               className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700 transition cursor-pointer"
               id="cancel-form-btn"
             >
@@ -507,12 +513,14 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
             </button>
             <button
               type="submit"
+              disabled={isSaving}
               className="px-5 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition shadow-md shadow-blue-100 dark:shadow-none cursor-pointer"
               id="submit-form-btn"
             >
-              {entryToEdit ? "Save Changes" : "Log Shift"}
+              {isSaving ? "Saving…" : entryToEdit ? "Save Changes" : "Log Shift"}
             </button>
           </div>
+          </fieldset>
         </form>
       </motion.div>
     </div>

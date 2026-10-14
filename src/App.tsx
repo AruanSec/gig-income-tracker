@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { PlusCircle, RefreshCw, HelpCircle, TrendingUp, Landmark, ShieldCheck, DollarSign, LogOut, Car, Route, Download, Upload, Database, Sun, Moon, Trash2, Beaker, Settings, Lock, Calculator } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+import { saveRecord } from "./api";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "./types";
 import { INITIAL_INCOME_ENTRIES, INITIAL_MILEAGE_ENTRIES, INITIAL_VEHICLE_EXPENSES } from "./data/mockData";
 import { calculateStats, formatCurrency, calculateMileageStats } from "./utils";
@@ -229,48 +230,13 @@ export default function App() {
   }, [mileageEntries, mileageStartDate, mileageEndDate]);
 
   // Handle saving new or edited logs
-  // Handle saving new or edited logs
   const handleSaveEntry = async (newEntryData: Omit<IncomeEntry, "id"> & { id?: string }) => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
-
-    try {
-      if (newEntryData.id) {
-        // Editing existing entry
-        const res = await fetch(`/api/income/${newEntryData.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newEntryData)
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setEntries((prev) =>
-            prev.map((item) => (item.id === newEntryData.id ? updated : item))
-          );
-        }
-      } else {
-        // Adding new entry
-        const res = await fetch("/api/income", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newEntryData)
-        });
-        if (res.ok) {
-          const saved = await res.json();
-          setEntries((prev) => [saved, ...prev]);
-        }
-      }
-      setIsFormOpen(false);
-      setEntryToEdit(null);
-    } catch (e) {
-      console.error("Failed to save income entry", e);
-    }
+    const saved = await saveRecord<IncomeEntry>("income", newEntryData);
+    setEntries((previous) => newEntryData.id
+      ? previous.map((item) => item.id === newEntryData.id ? saved : item)
+      : [saved, ...previous]);
+    setIsFormOpen(false);
+    setEntryToEdit(null);
   };
 
   // Handle deleting logs
@@ -328,44 +294,12 @@ export default function App() {
 
   // Handle saving new or edited mileage logs
   const handleSaveMileageEntry = async (newMileageData: Omit<MileageEntry, "id"> & { id?: string }) => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
-
-    try {
-      if (newMileageData.id) {
-        const res = await fetch(`/api/mileage/${newMileageData.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newMileageData)
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setMileageEntries((prev) =>
-            prev.map((item) => (item.id === newMileageData.id ? updated : item))
-          );
-        }
-      } else {
-        const res = await fetch("/api/mileage", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newMileageData)
-        });
-        if (res.ok) {
-          const saved = await res.json();
-          setMileageEntries((prev) => [saved, ...prev]);
-        }
-      }
-      setIsMileageFormOpen(false);
-      setMileageToEdit(null);
-    } catch (e) {
-      console.error("Failed to save mileage entry", e);
-    }
+    const saved = await saveRecord<MileageEntry>("mileage", newMileageData);
+    setMileageEntries((previous) => newMileageData.id
+      ? previous.map((item) => item.id === newMileageData.id ? saved : item)
+      : [saved, ...previous]);
+    setIsMileageFormOpen(false);
+    setMileageToEdit(null);
   };
 
   // Handle deleting mileage logs
@@ -401,44 +335,12 @@ export default function App() {
 
   // Handle saving new or edited vehicle expenses
   const handleSaveVehicleExpense = async (newExpenseData: Omit<VehicleExpense, "id"> & { id?: string }) => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
-
-    try {
-      if (newExpenseData.id) {
-        const res = await fetch(`/api/expenses/${newExpenseData.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newExpenseData)
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setVehicleExpenses((prev) =>
-            prev.map((item) => (item.id === newExpenseData.id ? updated : item))
-          );
-        }
-      } else {
-        const res = await fetch("/api/expenses", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify(newExpenseData)
-        });
-        if (res.ok) {
-          const saved = await res.json();
-          setVehicleExpenses((prev) => [saved, ...prev]);
-        }
-      }
-      setIsExpenseFormOpen(false);
-      setExpenseToEdit(null);
-    } catch (e) {
-      console.error("Failed to save expense entry", e);
-    }
+    const saved = await saveRecord<VehicleExpense>("expenses", newExpenseData);
+    setVehicleExpenses((previous) => newExpenseData.id
+      ? previous.map((item) => item.id === newExpenseData.id ? saved : item)
+      : [saved, ...previous]);
+    setIsExpenseFormOpen(false);
+    setExpenseToEdit(null);
   };
 
   // Handle deleting vehicle expenses

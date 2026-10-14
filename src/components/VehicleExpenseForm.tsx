@@ -1,3 +1,4 @@
+import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { X, Calendar, DollarSign, FileText, AlertCircle, Wrench } from "lucide-react";
@@ -5,7 +6,7 @@ import { VehicleExpense } from "../types";
 
 interface VehicleExpenseFormProps {
   entryToEdit: VehicleExpense | null;
-  onSave: (expense: Omit<VehicleExpense, "id"> & { id?: string }) => void;
+  onSave: (expense: Omit<VehicleExpense, "id"> & { id?: string }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -23,6 +24,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: VehicleExpenseFormProps) {
+  const { submit, isSaving, saveError } = useFormSubmission(onSave);
   const [date, setDate] = useState("");
   const [category, setCategory] = useState("Fuel");
   const [amount, setAmount] = useState("");
@@ -95,7 +97,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
       return;
     }
 
-    onSave({
+    void submit({
       id: entryToEdit?.id,
       date,
       category,
@@ -145,6 +147,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
           </div>
           <button
             onClick={onCancel}
+              disabled={isSaving}
             type="button"
             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition cursor-pointer"
             id="close-expense-form-btn"
@@ -155,6 +158,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          <fieldset disabled={isSaving} className="contents" aria-busy={isSaving}>
           
           {/* Date of Expense */}
           <div className="space-y-1">
@@ -325,11 +329,13 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
             </span>
           </div>
 
+          {saveError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{saveError}</p>}
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onCancel}
+              disabled={isSaving}
               className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 transition cursor-pointer"
               id="cancel-expense-btn"
             >
@@ -337,12 +343,14 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
             </button>
             <button
               type="submit"
+              disabled={isSaving}
               className="px-5 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition shadow-md shadow-blue-100 dark:shadow-none cursor-pointer"
               id="submit-expense-btn"
             >
-              {entryToEdit ? "Save Changes" : "Log Expense"}
+              {isSaving ? "Saving…" : entryToEdit ? "Save Changes" : "Log Expense"}
             </button>
           </div>
+          </fieldset>
         </form>
       </motion.div>
     </div>

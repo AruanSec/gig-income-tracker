@@ -1,3 +1,4 @@
+import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { X, Calendar, Route, FileText, Compass, AlertCircle } from "lucide-react";
@@ -5,7 +6,7 @@ import { MileageEntry } from "../types";
 
 interface MileageFormProps {
   entryToEdit: MileageEntry | null;
-  onSave: (entry: Omit<MileageEntry, "id"> & { id?: string }) => void;
+  onSave: (entry: Omit<MileageEntry, "id"> & { id?: string }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -19,6 +20,7 @@ const TRIP_TYPES = [
 ];
 
 export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFormProps) {
+  const { submit, isSaving, saveError } = useFormSubmission(onSave);
   const [date, setDate] = useState("");
   const [purpose, setPurpose] = useState("");
   const [startOdometer, setStartOdometer] = useState("");
@@ -118,7 +120,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
 
     if (Object.keys(errors).length > 0) return;
 
-    onSave({
+    void submit({
       id: entryToEdit?.id,
       date,
       purpose: purpose.trim(),
@@ -169,6 +171,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
           </div>
           <button
             onClick={onCancel}
+              disabled={isSaving}
             type="button"
             className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition cursor-pointer"
             id="close-form-btn"
@@ -179,6 +182,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          <fieldset disabled={isSaving} className="contents" aria-busy={isSaving}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Primary Details (Date and Trip Type) */}
@@ -366,11 +370,13 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
             </div>
           </div>
 
+          {saveError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{saveError}</p>}
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onCancel}
+              disabled={isSaving}
               className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700 transition cursor-pointer"
               id="cancel-form-btn"
             >
@@ -378,12 +384,14 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
             </button>
             <button
               type="submit"
+              disabled={isSaving}
               className="px-5 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition shadow-md shadow-blue-100 dark:shadow-none cursor-pointer"
               id="submit-form-btn"
             >
-              {entryToEdit ? "Save Changes" : "Log Trip"}
+              {isSaving ? "Saving…" : entryToEdit ? "Save Changes" : "Log Trip"}
             </button>
           </div>
+          </fieldset>
         </form>
       </motion.div>
     </div>
