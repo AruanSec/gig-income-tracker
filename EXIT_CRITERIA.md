@@ -2,14 +2,14 @@
 
 Status as of 2026-10-14. This checklist records completed work and proposes the remaining criteria for a production release. The release criteria below have not previously been agreed as a formal acceptance specification.
 
-**Current status: review, testing, deployment documentation, and npm cleanup are complete. Application fixes and server deployment remain open.** The review findings have not been fixed by the documentation or package-manager changes.
+**Current status: the ten originally failing behaviors have been fixed and verified with targeted regression checks on staging. Deployment documentation, npm cleanup, and maintained local regression suites are complete. The broader production-release requirements below remain open.** See the current verification section in [TEST_REPORT.md](TEST_REPORT.md).
 
 ## Completed work
 
 - [x] Review the backend, frontend, database layer, authentication, financial calculations, and deployment configuration; prioritize recommendations.
 - [x] Run the existing unit tests: all four test groups passed.
 - [x] Run TypeScript checking and the production build: both passed. The build still reports a bundle-size warning.
-- [x] Exercise the API against isolated SQLite and PostgreSQL databases and run targeted Chromium checks. Of 54 additional checks, 37 passed and 17 failed, representing 10 distinct issues. See [TEST_REPORT.md](TEST_REPORT.md).
+- [x] Run the original API/browser baseline: of 54 additional checks, 37 passed and 17 failed, representing 10 distinct issues. This historical result led to the fixes verified below. See [TEST_REPORT.md](TEST_REPORT.md).
 - [x] Verify income, mileage, and expense CRUD, record ownership, server-calculated derived values, and basic validation.
 - [x] Verify login/logout, ordinary-user restrictions, and revocation of other sessions after a user changes their own password.
 - [x] Verify financial-entry backup/restore, PostgreSQL transaction rollback after an injected restore failure, and persistence across an application process restart.
@@ -20,37 +20,47 @@ Status as of 2026-10-14. This checklist records completed work and proposes the 
 
 These are results from the recorded test run, not evidence that every workflow or every deployment environment passes.
 
-## Remaining fixes for the proposed release
+## Implemented improvements verified on staging
 
-Each item needs implementation and a passing regression check before it is marked complete.
+- [x] Preserve income, mileage, and expense drafts after failed creates or edits; show errors, allow retry, and block repeat submissions while a request is pending.
+- [x] Reject impossible dates, invalid numeric types, and malformed or negative rate settings; return HTTP 400 for invalid replacement passwords.
+- [x] Revoke existing sessions transactionally after an administrator resets a password.
+- [x] Start new accounts with empty financial ledgers; keep sample data behind the existing explicit action.
+- [x] Add versioned backups with custom CRA rates, while preserving current rates when restoring legacy backups.
+- [x] Correct calendar grouping, identify CAD, retain report cents and losses, use current-date defaults, and let the user select a planning comparison without asserting tax eligibility.
+- [x] Keep browser/API/calculation regressions in the repository and configure CI for both database backends and Chromium. Hosted CI execution remains pending.
+
+## Release fixes and verification status
+
+Checked items have passing targeted verification. R7 remains open for broader error-response consistency even though the original password-status failure is fixed.
 
 | Done | ID | Work remaining | Exit condition |
 |---|---|---|---|
-| [ ] | R1 | Correct calendar-date handling | January 1, month boundaries, and year boundaries remain in the correct accounting period in UTC and Canadian time zones. The Toronto annual-report case exports gross income 100.00 rather than 0.00. |
-| [ ] | R2 | Preserve input after failed saves | A rejected or failed save keeps the form and entered values, shows an actionable error, and allows retry. Pending submissions cannot create duplicate records. Verify income, mileage, and expense forms. |
-| [ ] | R3 | Reject impossible dates | Values such as `2026-02-30` return HTTP 400 without changing records. Valid leap days are accepted. Apply the same rules to restore input. |
-| [ ] | R4 | Reject invalid numeric types | Required amounts reject null, empty strings, booleans, and non-finite values with HTTP 400. Explicit numeric zero remains valid where allowed. |
-| [ ] | R5 | Validate CRA rate settings | Year, threshold, and rates have explicit validation. Negative or non-finite rates and malformed years are rejected without changing saved settings. |
-| [ ] | R6 | Restore all report inputs | Versioned backups include custom CRA rates as well as financial entries. A restore reproduces those settings and calculated reports; invalid input or a database failure preserves the previous data. Define handling for older backups. |
+| [x] | R1 | Correct calendar-date handling | January 1, month boundaries, and year boundaries remain in the correct accounting period in UTC and Canadian time zones. The Toronto annual-report case exports gross income 100.00 rather than 0.00. |
+| [x] | R2 | Preserve input after failed saves | A rejected or failed save keeps the form and entered values, shows an actionable error, and allows retry. Pending submissions cannot create duplicate records. Verify income, mileage, and expense forms. |
+| [x] | R3 | Reject impossible dates | Values such as `2026-02-30` return HTTP 400 without changing records. Valid leap days are accepted. Apply the same rules to restore input. |
+| [x] | R4 | Reject invalid numeric types | Required amounts reject null, empty strings, booleans, and non-finite values with HTTP 400. Explicit numeric zero remains valid where allowed. |
+| [x] | R5 | Validate CRA rate settings | Year, threshold, and rates have explicit validation. Negative or non-finite rates and malformed years are rejected without changing saved settings. |
+| [x] | R6 | Restore all report inputs | Versioned backups include custom CRA rates as well as financial entries. A restore reproduces those settings and calculated reports; invalid input or a database failure preserves the previous data. Define handling for older backups. |
 | [ ] | R7 | Return correct validation statuses | A short new password returns HTTP 400, not 500. Expected validation failures consistently use client-error responses; internal failures do not expose database or stack details. |
-| [ ] | R8 | Revoke sessions after an admin password reset | Password reset and session revocation happen transactionally. Existing tokens are rejected afterward, and login with the replacement password succeeds. |
-| [ ] | R9 | Separate demo and real records | New real accounts begin with empty income, mileage, and expense ledgers. Loading sample data is an explicit action and cannot silently contaminate real reports. This is a proposed product change to the current onboarding behavior. |
-| [ ] | R10 | Signal unsuccessful production startup | An unavailable production database prevents the app from serving, produces a useful log, and exits with a nonzero status. SQLite is never selected as the production fallback. |
+| [x] | R8 | Revoke sessions after an admin password reset | Password reset and session revocation happen transactionally. Existing tokens are rejected afterward, and login with the replacement password succeeds. |
+| [x] | R9 | Separate demo and real records | New real accounts begin with empty income, mileage, and expense ledgers. Loading sample data is an explicit action and cannot silently contaminate real reports. This is a proposed product change to the current onboarding behavior. |
+| [x] | R10 | Signal unsuccessful production startup | An unavailable production database prevents the app from serving, produces a useful log, and exits with a nonzero status. SQLite is never selected as the production fallback. |
 
 ## Financial correctness identified during review
 
 These recommendations still need implementation and focused tests; they were not all covered by the 54 additional checks.
 
-- [ ] **F1 — Use Canadian currency consistently.** Screens and exports identify CAD. Store and calculate money with exact cents or an equivalent decimal strategy, including a verified migration for existing values.
-- [ ] **F2 — Make deduction comparisons conditional on eligibility.** Reports and exports distinguish planning estimates from eligible filing deductions. A larger calculated value alone does not establish that a method is allowed. Document and review the assumptions, including GST/HST treatment and business use.
-- [ ] **F3 — Preserve financial losses.** Profit calculations and exports retain negative profit when expenses exceed revenue. Any zero floor for an estimated tax calculation is applied separately and explained.
-- [ ] **F4 — Verify calculation boundaries.** Tests cover annual mileage-threshold resets, a trip crossing the threshold, filtered-period totals, missing-year rate behavior, and income spanning reporting periods. The policy for assigning multi-day income to periods is explicit.
-- [ ] **F5 — Remove stale reporting defaults.** Reporting defaults use the current date or available records rather than fixed June/Q2/2026 selections.
+- [ ] **F1 — Use Canadian currency consistently.** CAD display/export is complete; exact monetary storage and migration remain open. Screens and exports identify CAD. Store and calculate money with exact cents or an equivalent decimal strategy, including a verified migration for existing values.
+- [ ] **F2 — Make deduction comparisons conditional on eligibility.** Explicit planning selection and eligibility wording are implemented; a substantive review of tax assumptions remains open. Reports and exports distinguish planning estimates from eligible filing deductions. A larger calculated value alone does not establish that a method is allowed. Document and review the assumptions, including GST/HST treatment and business use.
+- [x] **F3 — Preserve financial losses.** Profit calculations and exports retain negative profit when expenses exceed revenue. Any zero floor for an estimated tax calculation is applied separately and explained.
+- [ ] **F4 — Verify calculation boundaries.** Annual resets, crossing trips, and start-date allocation are covered; missing-year rate policy and broader filtered-period coverage remain open. Tests cover annual mileage-threshold resets, a trip crossing the threshold, filtered-period totals, missing-year rate behavior, and income spanning reporting periods. The policy for assigning multi-day income to periods is explicit.
+- [x] **F5 — Remove stale reporting defaults.** Reporting defaults use the current date or available records rather than fixed June/Q2/2026 selections.
 
 ## Verification and deployment still to complete
 
-- [ ] **V1 — Make regression testing repeatable.** Move the relevant temporary API/browser checks into maintained project tests, document their dependencies, and run them in CI. Existing failures must become passing checks; the permanent `npm test` currently runs only the small unit-test runner.
-- [ ] **V2 — Reverify the final code.** Run `npm ci`, `npm test`, `npm run typecheck`, and `npm run build`, plus the maintained API/browser checks, against the release candidate. Record versions, results, and any intentionally deferred checks.
+- [ ] **V1 — Make regression testing repeatable.** Maintained local suites and CI configuration are complete; a hosted CI run is still pending. Move the relevant temporary API/browser checks into maintained project tests, document their dependencies, and run them in CI. Existing failures must become passing checks; the permanent `npm test` currently runs only the small unit-test runner.
+- [ ] **V2 — Reverify the final code.** Local unit, type, build, API, and browser checks passed; clean-install verification of the final candidate in CI remains pending. Run `npm ci`, `npm test`, `npm run typecheck`, and `npm run build`, plus the maintained API/browser checks, against the release candidate. Record versions, results, and any intentionally deferred checks.
 - [ ] **V3 — Exercise the full Docker deployment.** Build the actual application image and start the documented stack with a fresh PostgreSQL volume. Verify startup, signup, CRUD, exports, logs, and health behavior. Confirm financial data survives application and database-container restarts and Compose recreation without volume deletion.
 - [ ] **V4 — Verify recovery.** Create a PostgreSQL dump and restore it into a separate database. Compare accounts, entries, custom rates, and resulting reports. Establish scheduled off-server backups and a tested recovery procedure.
 - [ ] **V5 — Verify server operation.** On the intended server, confirm DNS, HTTPS/certificate renewal, private database access, loopback application access, service restart after reboot, and an upgrade/rollback procedure. No server has been deployed in this work.

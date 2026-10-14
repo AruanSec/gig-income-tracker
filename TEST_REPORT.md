@@ -1,6 +1,29 @@
 # Test report
 
-Executed against the current code on 2026-10-14. No application source changes were made.
+## Current verification after fixes (2026-10-14)
+
+All ten behaviors that failed in the original baseline now have passing targeted checks. The original 54-check results are retained below as historical evidence, not as the current failure count.
+
+Changes were implemented on `feature/reliable-record-saves`, `feature/validated-records-and-complete-backups`, and `feature/canadian-financial-reporting`, integrated into `staging`, and tested there before promotion to `main`.
+
+| Check | Result |
+|---|---|
+| `npm test` | PASS: the original four groups and five calendar/currency/mileage regression tests |
+| `npm run typecheck` | PASS |
+| `npm run build` | PASS; the approximately 1.17 MB JavaScript bundle still produces a size warning |
+| `npm run test:api` with isolated SQLite | PASS: nine API scenarios plus the production startup check |
+| `npm run test:api` with disposable PostgreSQL 16 | PASS: nine API scenarios plus the production startup check; exercised the production server build |
+| `npm run test:e2e` | PASS: 18 Chromium checks |
+
+The maintained API suite covers empty new accounts, authentication and ownership, strict numeric/date/rate validation, versioned backups with CRA rates, legacy backup compatibility, invalid-restore atomicity, password validation, session revocation, and production startup failure. The browser suite covers create/edit failures and retries, pending-submission locks, and reports in UTC, Toronto, and Vancouver. CSV checks retain cents and negative profit, escape embedded quotes and hash characters, identify CAD, and verify explicit planning-method selection.
+
+GitHub Actions is configured to run unit, type, build, SQLite API, PostgreSQL API, and Chromium checks. This configuration has not yet been executed on GitHub. Local Chromium needed temporary library/font configuration in this environment; the documented `playwright install --with-deps chromium` command supplies browser dependencies on supported CI hosts.
+
+Existing preview records were preserved. Regression servers used separate temporary/in-memory databases; the disposable PostgreSQL container was removed. The broader release work in [EXIT_CRITERIA.md](EXIT_CRITERIA.md), including exact monetary storage, deployment/recovery testing, and readiness/proxy configuration, remains open.
+
+## Original baseline before fixes
+
+Executed against the baseline code on 2026-10-14. No application source changes were made during that baseline run.
 
 ## Standard checks
 
