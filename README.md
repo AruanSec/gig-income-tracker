@@ -14,11 +14,12 @@ A full-stack web application designed for Canadian gig workers (Uber, Lyft, Door
 - **12-Month Ledger & Visual Chart**: Located within the **Tax & Profit Summary** tab, compare gross revenue against total vehicle expenses side-by-side.
 - **Seasonal Metric Badges**: Automatically highlight Peak Revenue Month, Highest Expense Month, and Most Profitable Month.
 - **Quarterly Summaries**: Analyze Q1–Q4 net profit margins and performance ratios.
-- **CSV & Print Export**: Export monthly tax ledgers directly for CRA filing or personal accounting.
+- **CSV & Print Export**: Export monthly ledgers for accounting and tax-preparation review.
 
 ### 3. Tax & Mileage Planning
 - **Configurable Per-Kilometre Estimates**: Applies year-specific rates to mileage for planning and comparison.
-- **Actual Expense Comparison**: Compares kilometre-based estimates with tracked vehicle expenses.
+- **Actual Expense Comparison**: Compares kilometre-based estimates with tracked vehicle expenses. Select the planning method explicitly; the app does not determine deduction eligibility.
+- **Canadian Reports**: Displays CAD, retains cents and losses in exports, and groups calendar dates consistently across time zones. Multi-day income is assigned to its start date.
 
 > **Tax disclaimer**: This application is a record-keeping and planning tool, not tax advice. CRA prescribed per-kilometre allowance rates are not automatically a deduction method for every self-employed worker. Confirm the applicable method, rates, GST/HST treatment, and documentation requirements with current CRA guidance or a qualified Canadian tax professional before filing.
 
@@ -252,7 +253,9 @@ For browser regression tests, install Chromium once with
 `npx playwright install --with-deps chromium`, then run `npm run test:e2e`.
 The browser suite starts its own server on port 4173 with an in-memory SQLite
 database and external AI disabled. Keep that port free. It checks financial-form
-save failures, retained drafts, retries, and repeated submissions. It does not use
+save failures, retained drafts, retries, repeated submissions, and failed edits.
+It also checks CAD reports, year boundaries, losses, and planning-method changes
+in UTC, Toronto, and Vancouver. It does not use
 or alter the normal development database.
 
 Run `npm run test:api` after building to exercise API validation, ownership,

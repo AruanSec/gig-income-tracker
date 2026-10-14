@@ -1,3 +1,4 @@
+import { localDateString } from "../utils";
 import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
@@ -49,7 +50,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
       setNotes(entryToEdit.notes || "");
     } else {
       // Default to today's date
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateString();
       setDate(today);
       setPurpose("");
       setStartOdometer("");

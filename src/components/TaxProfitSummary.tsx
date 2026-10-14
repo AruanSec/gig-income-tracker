@@ -56,7 +56,7 @@ import {
   Legend,
 } from "recharts";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "../types";
-import { formatCurrency, formatDate, calculateTripDeductions } from "../utils";
+import { formatCurrency, formatDate, calendarDate, calculateTripDeductions } from "../utils";
 
 interface TaxProfitSummaryProps {
   entries: IncomeEntry[];
@@ -78,12 +78,14 @@ const DEFAULT_TAX_SECTION_ORDER = [
 
 export default function TaxProfitSummary({ entries, mileageEntries, expenses, craRates }: TaxProfitSummaryProps) {
   const [periodType, setPeriodType] = useState<PeriodType>("annual");
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [breakdownYear, setBreakdownYear] = useState<number>(2026);
-  const [selectedQuarter, setSelectedQuarter] = useState<number>(2); // Q2 (Apr - Jun)
-  const [selectedMonth, setSelectedMonth] = useState<number>(6); // June
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [breakdownYear, setBreakdownYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = useState<number>(() => Math.ceil((new Date().getMonth() + 1) / 3));
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
   const [taxRate, setTaxRate] = useState<number>(15); // Marginal tax rate slider (default 15%)
   const [businessUsePercentage, setBusinessUsePercentage] = useState<number>(85); // Actual expense business ratio (default 85%)
+
+  const [planningMethod, setPlanningMethod] = useState<"actual" | "standard">("actual");
 
   // Drag and drop section reordering state
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
@@ -142,18 +144,18 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
 
   // Extract available years from our records
   const availableYears = useMemo(() => {
-    const years = new Set<number>([2026]); // ensure current local year is default
+    const years = new Set<number>([new Date().getFullYear()]); // ensure current local year is default
     
     entries.forEach(e => {
-      const y = new Date(e.startDate).getFullYear();
+      const y = calendarDate(e.startDate).getFullYear();
       if (!isNaN(y)) years.add(y);
     });
     mileageEntries.forEach(e => {
-      const y = new Date(e.date).getFullYear();
+      const y = calendarDate(e.date).getFullYear();
       if (!isNaN(y)) years.add(y);
     });
     expenses.forEach(e => {
-      const y = new Date(e.date).getFullYear();
+      const y = calendarDate(e.date).getFullYear();
       if (!isNaN(y)) years.add(y);
     });
 
@@ -163,7 +165,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
   // Period filtering logic
   const filteredData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
-      const date = new Date(entry.startDate);
+      const date = calendarDate(entry.startDate);
       const y = date.getFullYear();
       const m = date.getMonth() + 1; // 1-indexed
 
@@ -182,7 +184,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     });
 
     const filteredMileage = mileageEntries.filter(entry => {
-      const date = new Date(entry.date);
+      const date = calendarDate(entry.date);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
 
@@ -201,7 +203,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     });
 
     const filteredExpenses = expenses.filter(entry => {
-      const date = new Date(entry.date);
+      const date = calendarDate(entry.date);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
 
@@ -248,7 +250,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     // To make this robust, we calculate the trip deductions chronologically for the full year and then filter/sum those that fall in the filtered set.
     const allTripsForYear = mileageEntries.filter(e => {
       if (periodType === "all") return true;
-      return new Date(e.date).getFullYear() === selectedYear;
+      return calendarDate(e.date).getFullYear() === selectedYear;
     });
     
     const tripDeductionMap = calculateTripDeductions(allTripsForYear, craRates);
@@ -280,17 +282,16 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     // Deductible actual expenses = Actual vehicle expenses * business ratio
     const deductibleActualExpenses = totalActualExpenses * (businessUsePercentage / 100);
 
-    // Let's recommend the method that yields the HIGHER deduction!
-    const optimalMethod = mileageDeduction >= deductibleActualExpenses ? "standard" : "actual";
-    const chosenDeduction = optimalMethod === "standard" ? mileageDeduction : deductibleActualExpenses;
+    // The user chooses a planning comparison; this does not establish tax eligibility.
+    const chosenDeduction = planningMethod === "standard" ? mileageDeduction : deductibleActualExpenses;
     
     // Profit calculations
-    const netProfitStandard = Math.max(0, grossIncome - mileageDeduction);
-    const netProfitActual = Math.max(0, grossIncome - deductibleActualExpenses);
-    const optimalNetProfit = Math.max(0, grossIncome - chosenDeduction);
+    const netProfitStandard = grossIncome - mileageDeduction;
+    const netProfitActual = grossIncome - deductibleActualExpenses;
+    const planningNetProfit = grossIncome - chosenDeduction;
 
     // Estimated Taxes Owed
-    const estTaxOwed = optimalNetProfit * (taxRate / 100);
+    const estTaxOwed = Math.max(0, planningNetProfit) * (taxRate / 100);
 
     return {
       grossIncome,
@@ -303,20 +304,20 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       gstHstTotal,
       actualExpensesByCategory,
       deductibleActualExpenses,
-      optimalMethod,
+      planningMethod,
       chosenDeduction,
-      optimalNetProfit,
+      planningNetProfit,
       netProfitStandard,
       netProfitActual,
       estTaxOwed,
       totalOnlineMinutes
     };
-  }, [filteredData, mileageEntries, periodType, selectedYear, taxRate, businessUsePercentage]);
+  }, [filteredData, mileageEntries, craRates, periodType, selectedYear, taxRate, businessUsePercentage, planningMethod]);
 
   // 6-Month Trend Data for Recharts Line Chart
   const last6MonthsData = useMemo(() => {
     const result = [];
-    const currentDate = new Date("2026-07-06");
+    const currentDate = new Date();
     
     for (let i = 5; i >= 0; i--) {
       const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
@@ -324,23 +325,23 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       const month = d.getMonth(); // 0-indexed
       
       const monthEntries = entries.filter(e => {
-        const ed = new Date(e.startDate);
+        const ed = calendarDate(e.startDate);
         return ed.getFullYear() === year && ed.getMonth() === month;
       });
       
       const monthMileage = mileageEntries.filter(e => {
-        const md = new Date(e.date);
+        const md = calendarDate(e.date);
         return md.getFullYear() === year && md.getMonth() === month;
       });
       
       const monthExpenses = expenses.filter(e => {
-        const xd = new Date(e.date);
+        const xd = calendarDate(e.date);
         return xd.getFullYear() === year && xd.getMonth() === month;
       });
       
       const gross = monthEntries.reduce((acc, curr) => acc + curr.netFare + curr.tips, 0);
       
-      const allTripsForYear = mileageEntries.filter(e => new Date(e.date).getFullYear() === year);
+      const allTripsForYear = mileageEntries.filter(e => calendarDate(e.date).getFullYear() === year);
       const tripDeductions = calculateTripDeductions(allTripsForYear, craRates);
       
       let mileageDeduct = 0;
@@ -356,19 +357,19 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       const actualTotal = monthExpenses.reduce((acc, curr) => acc + curr.amount, 0);
       const actualDeduct = actualTotal * (businessUsePercentage / 100);
       
-      const chosenDeduct = Math.max(mileageDeduct, actualDeduct);
-      const netProfit = Math.max(0, gross - chosenDeduct);
+      const chosenDeduct = planningMethod === "standard" ? mileageDeduct : actualDeduct;
+      const netProfit = gross - chosenDeduct;
       
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       result.push({
         name: `${monthNames[month]} ${year}`,
-        "Net Profit": Math.round(netProfit),
+        "Net Profit": Number(netProfit.toFixed(2)),
         "Gross Revenue": Math.round(gross),
         "Deductions": Math.round(chosenDeduct),
       });
     }
     return result;
-  }, [entries, mileageEntries, expenses, craRates, businessUsePercentage]);
+  }, [entries, mileageEntries, expenses, craRates, businessUsePercentage, planningMethod]);
 
   // 12-Month Seasonal Breakdown Data for Breakdown Year
   const monthlyBreakdownData = useMemo(() => {
@@ -379,15 +380,15 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     ];
 
     const yearEntries = entries.filter(e => {
-      const d = new Date(e.startDate);
+      const d = calendarDate(e.startDate);
       return !isNaN(d.getTime()) && d.getFullYear() === breakdownYear;
     });
     const yearMileage = mileageEntries.filter(e => {
-      const d = new Date(e.date);
+      const d = calendarDate(e.date);
       return !isNaN(d.getTime()) && d.getFullYear() === breakdownYear;
     });
     const yearExpenses = expenses.filter(e => {
-      const d = new Date(e.date);
+      const d = calendarDate(e.date);
       return !isNaN(d.getTime()) && d.getFullYear() === breakdownYear;
     });
 
@@ -409,9 +410,9 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     let totalYearNetProfit = 0;
 
     const monthlyStats = monthNamesShort.map((shortName, monthIdx) => {
-      const mEntries = yearEntries.filter(e => new Date(e.startDate).getMonth() === monthIdx);
-      const mExpenses = yearExpenses.filter(e => new Date(e.date).getMonth() === monthIdx);
-      const mMileage = yearMileage.filter(e => new Date(e.date).getMonth() === monthIdx);
+      const mEntries = yearEntries.filter(e => calendarDate(e.startDate).getMonth() === monthIdx);
+      const mExpenses = yearExpenses.filter(e => calendarDate(e.date).getMonth() === monthIdx);
+      const mMileage = yearMileage.filter(e => calendarDate(e.date).getMonth() === monthIdx);
 
       const revenue = mEntries.reduce((acc, curr) => acc + curr.netFare + curr.tips, 0);
       const netFare = mEntries.reduce((acc, curr) => acc + curr.netFare, 0);
@@ -432,8 +433,8 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       });
 
       const deductibleActual = actualExpenses * (businessUsePercentage / 100);
-      const claimedDeduction = Math.max(mileageDeduct, deductibleActual);
-      const netProfit = Math.max(0, revenue - claimedDeduction);
+      const claimedDeduction = planningMethod === "standard" ? mileageDeduct : deductibleActual;
+      const netProfit = revenue - claimedDeduction;
       const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
       totalYearRevenue += revenue;
@@ -462,14 +463,14 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
         month: shortName,
         fullMonth: monthNamesFull[monthIdx],
         monthIdx,
-        revenue: Math.round(revenue),
-        netFare: Math.round(netFare),
-        tips: Math.round(tips),
-        actualExpenses: Math.round(actualExpenses),
+        revenue: Number(revenue.toFixed(2)),
+        netFare: Number(netFare.toFixed(2)),
+        tips: Number(tips.toFixed(2)),
+        actualExpenses: Number(actualExpenses.toFixed(2)),
         mileageKm: Math.round(mileageKm),
-        mileageDeduction: Math.round(mileageDeduct),
-        claimedDeduction: Math.round(claimedDeduction),
-        netProfit: Math.round(netProfit),
+        mileageDeduction: Number(mileageDeduct.toFixed(2)),
+        claimedDeduction: Number(claimedDeduction.toFixed(2)),
+        netProfit: Number(netProfit.toFixed(2)),
         profitMargin: Math.round(profitMargin),
       };
     });
@@ -513,7 +514,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       peakProfitMonth,
       peakProfitVal: peakProfitVal > -Infinity ? peakProfitVal : 0,
     };
-  }, [entries, mileageEntries, expenses, breakdownYear, businessUsePercentage, craRates]);
+  }, [entries, mileageEntries, expenses, breakdownYear, businessUsePercentage, craRates, planningMethod]);
 
   // Recharts Custom Tooltip Component
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -554,7 +555,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
   // CSV Export Trigger
   const handleExportCSV = () => {
     const title = `Gig_Economy_Tax_Summary_${getPeriodLabel().replace(/\s+/g, "_")}`;
-    const headers = ["Financial Line Item", "Amount (USD)", "Notes / Description"];
+    const headers = ["Financial Line Item", "Amount (CAD)", "Notes / Description"];
     
     const rows = [
       ["Gross Income (Net Fare + Tips)", stats.grossIncome.toFixed(2), "Total driver platform revenue before write-offs"],
@@ -566,12 +567,12 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       ["DEDUCTION OPTION 2: Actual Vehicle Costs", stats.totalActualExpenses.toFixed(2), "Sum of all logged operating receipts"],
       [`  - Deductible portion (${businessUsePercentage}%)`, stats.deductibleActualExpenses.toFixed(2), "Calculated based on business use ratio slider"],
       [],
-      ["RECOMMENDED METHOD", stats.optimalMethod === "standard" ? "Standard Km Mileage Rate" : "Actual Receipts Method", "Yields the higher tax write-off"],
-      ["Deductions Allowed", stats.chosenDeduction.toFixed(2), "Deduction value applied to net profit calculation"],
+      ["SELECTED PLANNING METHOD", stats.planningMethod === "standard" ? "Standard Km Mileage Rate" : "Actual Receipts Method", "User-selected comparison; confirm eligibility before filing"],
+      ["Planning Expense Estimate", stats.chosenDeduction.toFixed(2), "Deduction value applied to net profit calculation"],
       [],
-      ["Net Taxable Profit", stats.optimalNetProfit.toFixed(2), "Gross Revenue minus claimed deductions"],
+      ["Estimated Profit / Loss", stats.planningNetProfit.toFixed(2), "Gross revenue minus the selected planning expense estimate"],
       [`Estimated Taxes Owed (${taxRate}%)`, stats.estTaxOwed.toFixed(2), `Estimated income tax based on interactive ${taxRate}% rate`],
-      ["Tracked GST/HST (ITCs)", stats.gstHstTotal.toFixed(2), "Input Tax Credits claimed on eligible receipts"]
+      ["Tracked GST/HST (ITCs)", stats.gstHstTotal.toFixed(2), "Tracked tax amounts before eligibility and business-use review"]
     ];
 
     // Build categories breakdown
@@ -586,7 +587,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     // Seasonal Monthly Breakdown Table Export
     rows.push([]);
     rows.push([`SEASONAL MONTHLY BREAKDOWN (${breakdownYear})`, "", "Monthly Revenue vs. Total Expenses"]);
-    rows.push(["Month", "Gross Revenue ($)", "Actual Expenses ($)", "Claimed Deduction ($)", "Net Taxable Profit ($)", "Profit Margin (%)"]);
+    rows.push(["Month", "Gross Revenue ($)", "Actual Expenses ($)", "Planning Expense Estimate (CAD)", "Estimated Profit / Loss ($)", "Profit Margin (%)"]);
     monthlyBreakdownData.monthlyStats.forEach(m => {
       rows.push([
         m.fullMonth,
@@ -608,16 +609,16 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
         : "0%"
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(","), ...rows.map(e => e.map(val => `"${val !== undefined ? val : ""}"`).join(","))].join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
+    const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const csvContent = [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${title}.csv`);
+    link.href = url;
+    link.download = `${title}.csv`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   // PDF / System print friendly trigger
@@ -893,7 +894,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                           Optimized
                         </div>
                         <div className="flex items-center justify-between pr-16">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deductions Allowed</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Planning Expense Estimate</p>
                           <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 transition shrink-0" />
                           <div className="absolute bottom-full left-4 right-4 mb-2.5 bg-slate-950 text-slate-200 rounded-xl p-3 shadow-2xl text-[10px] leading-relaxed font-sans font-medium opacity-0 invisible group-hover/deduct:opacity-100 group-hover/deduct:visible transition-all duration-200 z-50 border border-slate-800 pointer-events-none">
                             Planning comparison between a per-kilometre estimate and actual operating receipts. Confirm your eligible filing method with current CRA guidance.
@@ -903,25 +904,25 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                         <p className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">{formatCurrency(stats.chosenDeduction)}</p>
                         <div className="flex items-center gap-1.5 pt-2 text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
                           <span className="font-bold text-slate-700 dark:text-slate-300">Method:</span>
-                          <span>{stats.optimalMethod === "standard" ? "Standard Km Rate" : `Actual Receipts (${businessUsePercentage}%)`}</span>
+                          <span>{stats.planningMethod === "standard" ? "Standard Km Rate" : `Actual Receipts (${businessUsePercentage}%)`}</span>
                         </div>
                       </div>
 
-                      {/* Net Taxable Profit Card */}
+                      {/* Estimated Profit / Loss Card */}
                       <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/net cursor-help">
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Net Taxable Profit</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Profit / Loss</p>
                           <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 transition shrink-0" />
                           <div className="absolute bottom-full left-4 right-4 mb-2.5 bg-slate-950 text-slate-200 rounded-xl p-3 shadow-2xl text-[10px] leading-relaxed font-sans font-medium opacity-0 invisible group-hover/net:opacity-100 group-hover/net:visible transition-all duration-200 z-50 border border-slate-800 pointer-events-none">
                             Your taxable business income after writing off business expenses. This is the value upon which taxes are estimated.
                             <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-950 border-r border-b border-slate-800 rotate-45"></div>
                           </div>
                         </div>
-                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-450 font-mono">{formatCurrency(stats.optimalNetProfit)}</p>
+                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-450 font-mono">{formatCurrency(stats.planningNetProfit)}</p>
                         <div className="flex items-center justify-between pt-2 text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
                           <span>Net Profit Ratio:</span>
                           <span className="font-bold font-mono">
-                            {stats.grossIncome > 0 ? `${Math.round((stats.optimalNetProfit / stats.grossIncome) * 100)}%` : "0%"}
+                            {stats.grossIncome > 0 ? `${Math.round((stats.planningNetProfit / stats.grossIncome) * 100)}%` : "0%"}
                           </span>
                         </div>
                       </div>
@@ -1342,7 +1343,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
 
               if (sectionId === "filing-comparison") {
                 return (
-                  <SortableDashboardSection key="filing-comparison" id="filing-comparison" headerLabel="Tax Filing Comparison & ITCs">
+                  <SortableDashboardSection key="filing-comparison" id="filing-comparison" headerLabel="Planning Comparison & Tracked GST/HST">
                     {/* 4. Comparison & Recommendations Panel */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -1350,34 +1351,40 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
         <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-8">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <Scale className="w-3.5 h-3.5 text-blue-500" /> Comparison of Tax Filing Methods
+              <Scale className="w-3.5 h-3.5 text-blue-500" /> Comparison of Planning Methods
             </h3>
             <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-450 bg-emerald-100 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Optimal Savings Found
+              Planning Only
             </span>
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            The Canada Revenue Agency (CRA) allows simplified logbook standard business travel rates or detailed actual operating cost tracking. Compare both structures below. We automatically applied the option that decreases your taxable net income the most!
+            Compare actual operating costs with a per-kilometre estimate for planning. CRA allowance rates are not automatically a deduction method for self-employed workers. Confirm your eligible method, business-use ratio, and GST/HST treatment before filing. Income spanning multiple days is assigned to its start date in these reports.
           </p>
+
+          <label className="block text-sm font-semibold" htmlFor="planning-method">Planning method</label>
+          <select id="planning-method" value={planningMethod} onChange={event => setPlanningMethod(event.target.value as "actual" | "standard")} className="rounded border p-2 bg-white dark:bg-slate-900">
+            <option value="actual">Actual vehicle expenses</option>
+            <option value="standard">Per-kilometre comparison</option>
+          </select>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
             {/* Standard Km Rate Column */}
             <div className={`p-4 rounded-xl border transition ${
-              stats.optimalMethod === "standard" 
+              stats.planningMethod === "standard"
                 ? "bg-blue-50/20 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/50 ring-1 ring-blue-100/50 dark:ring-blue-900/30" 
                 : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100">1. Per-Kilometre Planning Estimate</span>
-                {stats.optimalMethod === "standard" && (
+                {stats.planningMethod === "standard" && (
                   <span className="text-[9px] font-black text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/40 px-2 py-0.5 rounded-md">
-                    RECOMENDED
+                    SELECTED
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Simplified standard rate allowance per business km driven.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Per-kilometre comparison using your configured annual rates; eligibility is not determined here.</p>
               
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between border-b border-slate-100/50 dark:border-slate-800/50 pb-1">
@@ -1386,7 +1393,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 </div>
                 <div className="flex justify-between border-b border-slate-100/50 dark:border-slate-800/50 pb-1">
                   <span className="text-slate-500 dark:text-slate-400">CRA Rate (approx):</span>
-                  <span className="font-bold font-mono text-slate-800 dark:text-slate-200">Tiered: 72¢/66¢</span>
+                  <span className="font-bold font-mono text-slate-800 dark:text-slate-200">Configured annual rates</span>
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Total Deduction:</span>
@@ -1397,15 +1404,15 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
 
             {/* Actual Operating Costs Column */}
             <div className={`p-4 rounded-xl border transition ${
-              stats.optimalMethod === "actual" 
+              stats.planningMethod === "actual"
                 ? "bg-blue-50/20 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/50 ring-1 ring-blue-100/50 dark:ring-blue-900/30" 
                 : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100">2. Actual Receipts Method</span>
-                {stats.optimalMethod === "actual" && (
+                {stats.planningMethod === "actual" && (
                   <span className="text-[9px] font-black text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/40 px-2 py-0.5 rounded-md">
-                    RECOMENDED
+                    SELECTED
                   </span>
                 )}
               </div>
@@ -1421,7 +1428,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                   <span className="font-bold font-mono text-slate-800 dark:text-slate-200">{businessUsePercentage}%</span>
                 </div>
                 <div className="flex justify-between pt-1">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Allowed Deduction:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Planning Expense Estimate:</span>
                   <span className="font-black text-emerald-600 dark:text-emerald-450 font-mono">{formatCurrency(stats.deductibleActualExpenses)}</span>
                 </div>
               </div>
@@ -1433,12 +1440,9 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
           <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/40 p-3.5 rounded-xl text-left flex gap-2.5 items-start">
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="text-xs font-black text-emerald-950 dark:text-emerald-300">Maximize Your Write-offs</p>
+              <p className="text-xs font-black text-emerald-950 dark:text-emerald-300">Choose an Eligible Method</p>
               <p className="text-[11px] text-emerald-800 dark:text-emerald-450 leading-normal">
-                {stats.optimalMethod === "standard" 
-                  ? `Standard mileage currently saves you ${formatCurrency(stats.mileageDeduction - stats.deductibleActualExpenses)} more than actual receipts. Keep tracking every business kilometre driven in your trip logger!`
-                  : `Your actual operating-cost estimate is ${formatCurrency(stats.deductibleActualExpenses - stats.mileageDeduction)} higher than the per-kilometre estimate. Confirm eligibility and retain all receipts and logs.`
-                }
+                Your selection changes the planning totals. A higher estimate does not establish an allowable deduction. Retain receipts and mileage logs, and verify eligibility with current CRA guidance or a qualified tax professional.
               </p>
             </div>
           </div>
@@ -1449,7 +1453,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Coins className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> GST/HST Credits (ITCs)
+                <Coins className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Tracked GST/HST
               </h3>
             </div>
 
@@ -1457,7 +1461,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
             <div className="bg-blue-50/20 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl text-center space-y-1">
               <p className="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">Recoverable GST/HST Paid</p>
               <p className="text-3xl font-black text-blue-600 dark:text-blue-450 font-mono">{formatCurrency(stats.gstHstTotal)}</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-1.5">Claimable Input Tax Credits (ITCs) for active period</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-1.5">Tracked tax amounts before eligibility and business-use review</p>
             </div>
 
             <div className="space-y-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
@@ -1465,14 +1469,14 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 Rideshare and delivery drivers in Canada are required to track or pay GST/HST. 
               </p>
               <p>
-                By tracking the GST/HST included in fuel, repairs, and maintenance, you can claim <strong>Input Tax Credits (ITCs)</strong> on your Form GST34 to directly reduce your net sales tax payable.
+                Tracked GST/HST may support input tax credits if you are registered and the expenses qualify. Confirm eligibility and any business-use allocation before including these amounts in a return.
               </p>
             </div>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-3 rounded-lg text-[10px] text-slate-400 dark:text-slate-500 flex items-start gap-1.5 leading-normal">
             <AlertCircle className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-            <span>Eligible ITCs will be deducted dollar-for-dollar from the GST/HST sales tax you owe to the CRA.</span>
+            <span>Tracked amounts are not an eligibility determination or a calculated GST/HST return.</span>
           </div>
         </div>
       </div>

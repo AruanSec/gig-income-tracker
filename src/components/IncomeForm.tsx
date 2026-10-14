@@ -1,3 +1,4 @@
+import { localDateString } from "../utils";
 import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
@@ -57,7 +58,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
       setNotes(entryToEdit.notes || "");
     } else {
       // Default dates to today's local date
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateString();
       setStartDate(today);
       setEndDate(today);
       setTrips("");

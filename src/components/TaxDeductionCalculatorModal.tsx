@@ -15,7 +15,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "../types";
-import { formatCurrency } from "../utils";
+import { formatCurrency, calculateMileageStats } from "../utils";
 
 interface TaxDeductionCalculatorModalProps {
   isOpen: boolean;
@@ -36,27 +36,14 @@ export default function TaxDeductionCalculatorModal({
 }: TaxDeductionCalculatorModalProps) {
   // Calculated initial values from logs
   const loggedIncome = useMemo(() => {
-    return incomeEntries.reduce((sum, e) => sum + (e.totalEarnings || 0), 0);
+    return incomeEntries.reduce((sum, e) => sum + e.netFare + e.tips, 0);
   }, [incomeEntries]);
 
   const loggedExpenseTotal = useMemo(() => {
     return vehicleExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   }, [vehicleExpenses]);
 
-  const defaultCraRate = useMemo(() => {
-    if (craRates && craRates.length > 0) {
-      return craRates[0].tier1_rate || 0.70;
-    }
-    return 0.70;
-  }, [craRates]);
-
-  const loggedBusinessKm = useMemo(() => {
-    return mileageEntries.reduce((sum, m) => sum + (m.distance || 0), 0);
-  }, [mileageEntries]);
-
-  const loggedMileageDeduction = useMemo(() => {
-    return loggedBusinessKm * defaultCraRate;
-  }, [loggedBusinessKm, defaultCraRate]);
+  const loggedMileageDeduction = useMemo(() => calculateMileageStats(mileageEntries, craRates).totalDeduction, [mileageEntries, craRates]);
 
   // Editable Form state initialized from logs
   const [grossIncome, setGrossIncome] = useState<number>(0);
@@ -64,16 +51,16 @@ export default function TaxDeductionCalculatorModal({
   const [businessUsePct, setBusinessUsePct] = useState<number>(85); // 85% business use default
   const [vehicleExpenseInput, setVehicleExpenseInput] = useState<number>(0);
   const [mileageDeductionInput, setMileageDeductionInput] = useState<number>(0);
-  const [otherDeductionsInput, setOtherDeductionsInput] = useState<number>(350); // Cell phone / supplies estimate
-  const [deductionMethod, setDeductionMethod] = useState<"standard_mileage" | "actual_expense">("standard_mileage");
+  const [otherDeductionsInput, setOtherDeductionsInput] = useState<number>(0); // Cell phone / supplies estimate
+  const [deductionMethod, setDeductionMethod] = useState<"standard_mileage" | "actual_expense">("actual_expense");
   const [copied, setCopied] = useState(false);
 
   // Synchronize state when modal opens or entries change
   useEffect(() => {
     if (isOpen) {
-      setGrossIncome(Math.round(loggedIncome));
-      setVehicleExpenseInput(Math.round(loggedExpenseTotal));
-      setMileageDeductionInput(Math.round(loggedMileageDeduction));
+      setGrossIncome(loggedIncome);
+      setVehicleExpenseInput(loggedExpenseTotal);
+      setMileageDeductionInput(loggedMileageDeduction);
     }
   }, [isOpen, loggedIncome, loggedExpenseTotal, loggedMileageDeduction]);
 
@@ -102,7 +89,7 @@ export default function TaxDeductionCalculatorModal({
   }, [eligibleVehicleDeduction, otherDeductionsInput]);
 
   const taxableIncome = useMemo(() => {
-    return Math.max(0, grossIncome - totalDeductions);
+    return grossIncome - totalDeductions;
   }, [grossIncome, totalDeductions]);
 
   const estimatedTaxWithoutDeductions = useMemo(() => {
@@ -110,7 +97,7 @@ export default function TaxDeductionCalculatorModal({
   }, [grossIncome, taxRate]);
 
   const estimatedTaxWithDeductions = useMemo(() => {
-    return (taxableIncome * taxRate) / 100;
+    return (Math.max(0, taxableIncome) * taxRate) / 100;
   }, [taxableIncome, taxRate]);
 
   const taxSavings = useMemo(() => {
@@ -123,21 +110,21 @@ export default function TaxDeductionCalculatorModal({
   }, [taxSavings, grossIncome]);
 
   const handleResetToLogs = () => {
-    setGrossIncome(Math.round(loggedIncome));
-    setVehicleExpenseInput(Math.round(loggedExpenseTotal));
-    setMileageDeductionInput(Math.round(loggedMileageDeduction));
+    setGrossIncome(loggedIncome);
+    setVehicleExpenseInput(loggedExpenseTotal);
+    setMileageDeductionInput(loggedMileageDeduction);
     setBusinessUsePct(85);
-    setOtherDeductionsInput(350);
+    setOtherDeductionsInput(0);
   };
 
   const handleCopySummary = () => {
     const summaryText = `--- GIG DRIVER TAX DEDUCTION ESTIMATE ---
 Gross Earnings: ${formatCurrency(grossIncome)}
-Planning Method: ${deductionMethod === "standard_mileage" ? "Per-Kilometre Estimate ($0.70/km)" : `Actual Vehicle Expenses (${businessUsePct}% Business Use)`}
+Planning Method: ${deductionMethod === "standard_mileage" ? "Per-Kilometre Planning Estimate" : `Actual Vehicle Expenses (${businessUsePct}% Business Use)`}
 Vehicle/Mileage Deduction: ${formatCurrency(eligibleVehicleDeduction)}
 Other Write-offs (Phone/Supplies): ${formatCurrency(otherDeductionsInput)}
 Total Write-Offs: ${formatCurrency(totalDeductions)}
-Taxable Income: ${formatCurrency(taxableIncome)}
+Estimated Profit / Loss: ${formatCurrency(taxableIncome)}
 Estimated Tax Rate: ${taxRate}%
 Tax Saved from Deductions: ${formatCurrency(taxSavings)}
 Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
@@ -305,7 +292,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setDeductionMethod("standard_mileage")}
+                    onClick={() => setDeductionMethod("actual_expense")}
                     className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
                       deductionMethod === "standard_mileage"
                         ? "bg-blue-50 dark:bg-blue-950/60 border-blue-500 text-blue-900 dark:text-blue-100 font-bold"
@@ -350,9 +337,9 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
               {deductionMethod === "standard_mileage" ? (
                 <div className="space-y-1 text-left">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>Logged Mileage Deduction ($)</span>
+                    <span>Logged Per-Kilometre Estimate (CAD)</span>
                     <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-                      {loggedBusinessKm} km @ ${defaultCraRate.toFixed(2)}/km
+                      Configured annual mileage tiers
                     </span>
                   </label>
                   <div className="relative">
@@ -391,7 +378,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Business Use Percentage ({businessUsePct}%)</span>
                       <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                        Eligible: {formatCurrency((vehicleExpenseInput * businessUsePct) / 100)}
+                        Business-use estimate: {formatCurrency((vehicleExpenseInput * businessUsePct) / 100)}
                       </span>
                     </label>
                     <input
@@ -464,7 +451,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                 <span className="font-bold text-blue-600 dark:text-blue-400">- {formatCurrency(otherDeductionsInput)}</span>
               </div>
               <div className="px-4 py-2.5 flex justify-between items-center bg-slate-50/70 dark:bg-slate-850/50 font-bold">
-                <span className="font-sans text-slate-800 dark:text-slate-200">Net Taxable Income:</span>
+                <span className="font-sans text-slate-800 dark:text-slate-200">Net Estimated Profit / Loss:</span>
                 <span className="text-slate-900 dark:text-white">{formatCurrency(taxableIncome)}</span>
               </div>
               <div className="px-4 py-2.5 flex justify-between items-center bg-emerald-50/40 dark:bg-emerald-950/20 font-bold">

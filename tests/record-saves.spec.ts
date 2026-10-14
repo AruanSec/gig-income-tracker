@@ -9,6 +9,12 @@ test.beforeAll(async ({ request }) => {
   token = (await result.json()).token;
 });
 
+test.beforeEach(async ({ request }) => {
+  const response = await request.post("/api/restore", { headers: { Authorization: `Bearer ${token}` },
+    data: { income: [], mileage: [], expenses: [] } });
+  expect(response.status()).toBe(200);
+});
+
 const forms = [
   { resource: "income", container: "#income-form-container", submit: "#submit-form-btn",
     fields: { startDate: "2026-06-15", endDate: "2026-06-15", trips: "1", onlineMinutes: "60", activeMinutes: "40", netFare: "100", tips: "2", taxes: "1", notes: "Draft income" } },
@@ -74,5 +80,29 @@ for (const form of forms) {
     release();
     await expect(page.locator(form.container)).toHaveCount(0);
     expect(requests).toBe(1);
+  });
+}
+
+for (const form of forms) {
+  test(`${form.resource}: failed edit preserves changes until a successful retry`, async ({ page }) => {
+    await openForm(page, form);
+    await page.locator(form.submit).click();
+    await expect(page.locator(form.container)).toHaveCount(0);
+    const title = form.resource === "income" ? "Edit shift entry" : form.resource === "mileage" ? "Edit trip log" : "Edit expense";
+    await page.getByTitle(title, { exact: true }).first().click();
+    const field = form.resource === "income" ? "notes" : form.resource === "mileage" ? "trip-purpose" : "expense-description";
+    await page.locator(`#${field}`).fill("Edited draft to retain");
+    let attempts = 0;
+    await page.route(`**/api/${form.resource}/*`, async route => {
+      if (route.request().method() !== "PUT") return route.continue();
+      if (++attempts > 1) return route.continue();
+      await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Please check this record" }) });
+    });
+    await page.locator(form.submit).click();
+    await expect(page.locator(form.container).getByRole("alert")).toContainText("Please check this record");
+    await expect(page.locator(`#${field}`)).toHaveValue("Edited draft to retain");
+    await page.locator(form.submit).click();
+    await expect(page.locator(form.container)).toHaveCount(0);
+    expect(attempts).toBe(2);
   });
 }
