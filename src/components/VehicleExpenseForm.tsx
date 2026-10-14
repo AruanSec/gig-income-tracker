@@ -1,3 +1,4 @@
+import { localDateString } from "../utils";
 import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
@@ -50,7 +51,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
       setGstHstAmount(entryToEdit.gstHstAmount !== undefined ? entryToEdit.gstHstAmount.toString() : "");
     } else {
       // Default to today's date
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateString();
       setDate(today);
       setGstHstEligible(true);
       setGstHstAmount("");

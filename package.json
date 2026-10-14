@@ -10,7 +10,7 @@
     "clean": "rm -rf dist server.js",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "tsx test_runner.ts",
+    "test": "tsx test_runner.ts && tsx --test tests/calculations.test.ts",
     "test:e2e": "playwright test",
     "test:api": "tsx --test tests/api.integration.ts"
   },
