@@ -378,7 +378,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Business Use Percentage ({businessUsePct}%)</span>
                       <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                        Eligible: {formatCurrency((vehicleExpenseInput * businessUsePct) / 100)}
+                        Business-use estimate: {formatCurrency((vehicleExpenseInput * businessUsePct) / 100)}
                       </span>
                     </label>
                     <input

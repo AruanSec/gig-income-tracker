@@ -288,10 +288,10 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
     // Profit calculations
     const netProfitStandard = grossIncome - mileageDeduction;
     const netProfitActual = grossIncome - deductibleActualExpenses;
-    const optimalNetProfit = grossIncome - chosenDeduction;
+    const planningNetProfit = grossIncome - chosenDeduction;
 
     // Estimated Taxes Owed
-    const estTaxOwed = Math.max(0, optimalNetProfit) * (taxRate / 100);
+    const estTaxOwed = Math.max(0, planningNetProfit) * (taxRate / 100);
 
     return {
       grossIncome,
@@ -306,7 +306,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       deductibleActualExpenses,
       planningMethod,
       chosenDeduction,
-      optimalNetProfit,
+      planningNetProfit,
       netProfitStandard,
       netProfitActual,
       estTaxOwed,
@@ -570,7 +570,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       ["SELECTED PLANNING METHOD", stats.planningMethod === "standard" ? "Standard Km Mileage Rate" : "Actual Receipts Method", "User-selected comparison; confirm eligibility before filing"],
       ["Planning Expense Estimate", stats.chosenDeduction.toFixed(2), "Deduction value applied to net profit calculation"],
       [],
-      ["Estimated Profit / Loss", stats.optimalNetProfit.toFixed(2), "Gross revenue minus the selected planning expense estimate"],
+      ["Estimated Profit / Loss", stats.planningNetProfit.toFixed(2), "Gross revenue minus the selected planning expense estimate"],
       [`Estimated Taxes Owed (${taxRate}%)`, stats.estTaxOwed.toFixed(2), `Estimated income tax based on interactive ${taxRate}% rate`],
       ["Tracked GST/HST (ITCs)", stats.gstHstTotal.toFixed(2), "Tracked tax amounts before eligibility and business-use review"]
     ];
@@ -918,11 +918,11 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                             <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-950 border-r border-b border-slate-800 rotate-45"></div>
                           </div>
                         </div>
-                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-450 font-mono">{formatCurrency(stats.optimalNetProfit)}</p>
+                        <p className="text-2xl font-black text-emerald-600 dark:text-emerald-450 font-mono">{formatCurrency(stats.planningNetProfit)}</p>
                         <div className="flex items-center justify-between pt-2 text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
                           <span>Net Profit Ratio:</span>
                           <span className="font-bold font-mono">
-                            {stats.grossIncome > 0 ? `${Math.round((stats.optimalNetProfit / stats.grossIncome) * 100)}%` : "0%"}
+                            {stats.grossIncome > 0 ? `${Math.round((stats.planningNetProfit / stats.grossIncome) * 100)}%` : "0%"}
                           </span>
                         </div>
                       </div>
@@ -1461,7 +1461,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
             <div className="bg-blue-50/20 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl text-center space-y-1">
               <p className="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">Recoverable GST/HST Paid</p>
               <p className="text-3xl font-black text-blue-600 dark:text-blue-450 font-mono">{formatCurrency(stats.gstHstTotal)}</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-1.5">Claimable Input Tax Credits (ITCs) for active period</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-1.5">Tracked tax amounts before eligibility and business-use review</p>
             </div>
 
             <div className="space-y-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
@@ -1469,14 +1469,14 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 Rideshare and delivery drivers in Canada are required to track or pay GST/HST. 
               </p>
               <p>
-                By tracking the GST/HST included in fuel, repairs, and maintenance, you can claim <strong>Input Tax Credits (ITCs)</strong> on your Form GST34 to directly reduce your net sales tax payable.
+                Tracked GST/HST may support input tax credits if you are registered and the expenses qualify. Confirm eligibility and any business-use allocation before including these amounts in a return.
               </p>
             </div>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-3 rounded-lg text-[10px] text-slate-400 dark:text-slate-500 flex items-start gap-1.5 leading-normal">
             <AlertCircle className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-            <span>Eligible ITCs will be deducted dollar-for-dollar from the GST/HST sales tax you owe to the CRA.</span>
+            <span>Tracked amounts are not an eligibility determination or a calculated GST/HST return.</span>
           </div>
         </div>
       </div>
