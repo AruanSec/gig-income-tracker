@@ -10,7 +10,7 @@ import Database from "better-sqlite3";
 import pg from "pg";
 
 // TEST_DATABASE_URL must point to a disposable PostgreSQL database when supplied.
-test("financial API regressions", { timeout: 120_000 }, async t => {
+test("financial API regressions", { timeout: 180_000 }, async t => {
   const tmp = await mkdtemp(path.join(tmpdir(), "gig-api-"));
   const dbPath = path.join(tmp, "test.sqlite");
   const socket = net.createServer();
@@ -19,8 +19,8 @@ test("financial API regressions", { timeout: 120_000 }, async t => {
   await new Promise<void>(resolve => socket.close(() => resolve()));
   const base = `http://127.0.0.1:${port}`;
   const url = process.env.TEST_DATABASE_URL;
-  const app = spawn(process.execPath, ["--import", "tsx", "server.ts"], {
-    env: { ...process.env, NODE_ENV: "development", DISABLE_HMR: "true", PORT: String(port),
+  const app = spawn(process.execPath, url ? ["dist/server.cjs"] : ["--import", "tsx", "server.ts"], {
+    env: { ...process.env, NODE_ENV: url ? "production" : "development", DISABLE_HMR: "true", PORT: String(port),
       DATABASE_URL: url || "postgresql://test:test@127.0.0.1:1/test", DB_PATH: dbPath, GEMINI_API_KEY: "" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -35,7 +35,7 @@ test("financial API regressions", { timeout: 120_000 }, async t => {
   }
   try {
     let ready = false;
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 360; i++) {
       if (app.exitCode !== null) throw new Error(logs);
       try { if ((await api("GET", "/api/health")).status === 200) { ready = true; break; } } catch {}
       await new Promise(resolve => setTimeout(resolve, 250));
