@@ -125,11 +125,11 @@ sudo systemctl reload caddy
 curl --fail https://tracker.example.com/api/health
 ```
 
-Caddy obtains and renews the TLS certificate and redirects HTTP to HTTPS. Its certificate setup requires correct DNS and inbound access to ports 80/443. Open `https://tracker.example.com` and create an account. New accounts currently receive sample financial records; remove them before entering real records. See [TEST_REPORT.md](TEST_REPORT.md) for the current functional findings.
+Caddy obtains and renews the TLS certificate and redirects HTTP to HTTPS. Its certificate setup requires correct DNS and inbound access to ports 80/443. Open `https://tracker.example.com` and create an account. New accounts start with empty financial ledgers. Use the explicit sample-data action only for demonstrations; it replaces that account's entries. See [TEST_REPORT.md](TEST_REPORT.md) for the current functional findings.
 
 ### Back up and restore PostgreSQL
 
-Run backups from the project directory with `dc` defined as above. A database dump includes accounts, financial records, and custom CRA rates. The application's JSON export currently omits CRA rates.
+Run backups from the project directory with `dc` defined as above. A database dump includes accounts, financial records, and custom CRA rates. The application's versioned JSON export also includes custom CRA rates. Restoring older, unversioned exports preserves the account's current rates.
 
 ```bash
 umask 077
@@ -178,7 +178,7 @@ dc down
 
 - **Caddy returns 502:** check `dc ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
 - **PostgreSQL authentication fails:** check the environment file and database logs. Existing volumes keep their original database credentials even if the environment file changes.
-- **Application repeatedly exits:** production requires reachable PostgreSQL and does not fall back to SQLite. Startup failures currently exit with status 0, so inspect logs and the health URL instead of relying only on the exit code.
+- **Application repeatedly exits:** production requires reachable PostgreSQL and does not fall back to SQLite. Startup failures exit with a nonzero status; inspect logs and the health URL to diagnose the cause.
 - **All users receive authentication rate limits:** the current app uses an in-memory IP limiter and does not configure Express to trust a reverse proxy, so requests through Caddy can share its IP-based limit. Configure proxy trust for your specific network before relying on per-user IP limits at scale.
 - **Certificate setup fails:** check DNS, firewall rules, and `sudo journalctl -u caddy --no-pager -n 100`.
 
@@ -254,3 +254,10 @@ The browser suite starts its own server on port 4173 with an in-memory SQLite
 database and external AI disabled. Keep that port free. It checks financial-form
 save failures, retained drafts, retries, and repeated submissions. It does not use
 or alter the normal development database.
+
+Run `npm run test:api` after building to exercise API validation, ownership,
+backup/restore, and session revocation. It uses a disposable SQLite database by
+default. To test PostgreSQL, set `TEST_DATABASE_URL` to a dedicated disposable test
+database; the suite creates accounts and records there. Never point it at a live
+database. GitHub Actions runs the standard checks and both regression suites on
+feature branches, staging, and main.

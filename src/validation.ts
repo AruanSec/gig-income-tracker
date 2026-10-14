@@ -20,20 +20,21 @@ function optionalText(value: unknown, max = 2000): string {
 }
 
 function number(value: unknown, name: string, min = 0): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed < min) throw new ValidationError(`${name} must be a finite number of at least ${min}.`);
+  const parsed = value;
+  if (typeof parsed !== "number" || !Number.isFinite(parsed) || parsed < min || parsed > Number.MAX_SAFE_INTEGER) throw new ValidationError(`${name} must be a finite number of at least ${min}.`);
   return parsed;
 }
 
 function integer(value: unknown, name: string, min = 0): number {
   const parsed = number(value, name, min);
-  if (!Number.isInteger(parsed)) throw new ValidationError(`${name} must be an integer.`);
+  if (!Number.isSafeInteger(parsed)) throw new ValidationError(`${name} must be an integer.`);
   return parsed;
 }
 
 function date(value: unknown, name: string): string {
   const parsed = text(value, name, 10);
-  if (!DATE_PATTERN.test(parsed) || Number.isNaN(Date.parse(`${parsed}T00:00:00Z`))) throw new ValidationError(`${name} must be a valid YYYY-MM-DD date.`);
+  const timestamp = Date.parse(`${parsed}T00:00:00Z`);
+  if (!DATE_PATTERN.test(parsed) || !Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== parsed) throw new ValidationError(`${name} must be a valid YYYY-MM-DD date.`);
   return parsed;
 }
 
@@ -77,4 +78,12 @@ export function parseExpense(value: unknown) {
   const gstHstAmount = gstHstEligible ? number(input.gstHstAmount ?? 0, "GST/HST amount") : 0;
   if (gstHstAmount > amount) throw new ValidationError("GST/HST amount cannot exceed the expense amount.");
   return { date: date(input.date, "Date"), category: text(input.category, "Category", 100), amount, description: text(input.description, "Description", 1000), gstHstEligible, gstHstAmount };
+}
+
+export function parseCraRate(value: unknown) {
+  const input = record(value);
+  const year = text(input.year, "Year", 4);
+  if (!/^[1-9]\d{3}$/.test(year)) throw new ValidationError("Year must contain four digits.");
+  return { year, tier1_threshold: number(input.tier1_threshold, "Tier 1 threshold"),
+    tier1_rate: number(input.tier1_rate, "Tier 1 rate"), tier2_rate: number(input.tier2_rate, "Tier 2 rate") };
 }

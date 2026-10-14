@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import { initDatabase, DBClient } from "./src/db";
-import { normalizeEmail, parseExpense, parseIncome, parseMileage, validatePassword, ValidationError } from "./src/validation";
+import { normalizeEmail, parseCraRate, parseExpense, parseIncome, parseMileage, validatePassword, ValidationError } from "./src/validation";
 
 let genAIClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI {
@@ -51,86 +51,6 @@ async function verifyPassword(password: string, salt: string, storedHash: string
 function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
-
-// Default Seed Data for New Users
-const SEED_INCOME = [
-  {
-    startDate: "2026-06-01",
-    endDate: "2026-06-01",
-    trips: 14,
-    onlineMinutes: 480,
-    activeMinutes: 320,
-    netFare: 185.5,
-    tips: 42.0,
-    taxes: 12.5,
-    totalEarnings: 215.0,
-    notes: "Friday shift - high surge pricing near downtown.",
-  },
-  {
-    startDate: "2026-06-02",
-    endDate: "2026-06-02",
-    trips: 18,
-    onlineMinutes: 540,
-    activeMinutes: 390,
-    netFare: 210.0,
-    tips: 58.5,
-    taxes: 15.0,
-    totalEarnings: 253.5,
-    notes: "Saturday dinner rush was active back-to-back.",
-  },
-  {
-    startDate: "2026-06-03",
-    endDate: "2026-06-03",
-    trips: 8,
-    onlineMinutes: 240,
-    activeMinutes: 150,
-    netFare: 92.0,
-    tips: 20.0,
-    taxes: 6.0,
-    totalEarnings: 106.0,
-    notes: "Sunday morning airport runs.",
-  },
-];
-
-const SEED_MILEAGE = [
-  {
-    date: "2026-06-01",
-    purpose: "Regional delivery routes across Greater Toronto Area",
-    startOdometer: 124500,
-    endOdometer: 126750,
-    distance: 2250,
-    tripType: "Delivery",
-    notes: "Completed 45 parcel drop-offs during peak weekly logistics run.",
-  },
-  {
-    date: "2026-06-12",
-    purpose: "Rideshare driving during rainy weekend peak periods",
-    startOdometer: 126750,
-    endOdometer: 129100,
-    distance: 2350,
-    tripType: "Ride-share",
-    notes: "Intense weekend shifts - high demand and steady airport trips.",
-  },
-];
-
-const SEED_EXPENSES = [
-  {
-    date: "2026-06-05",
-    category: "Oil Change",
-    amount: 89.5,
-    description: "Synthetic oil change & filter replacement at certified garage.",
-    gstHstEligible: 1,
-    gstHstAmount: 10.3,
-  },
-  {
-    date: "2026-06-15",
-    category: "Insurance",
-    amount: 210.0,
-    description: "Monthly commercial auto insurance premium for rideshare endorsement.",
-    gstHstEligible: 0,
-    gstHstAmount: 0,
-  },
-];
 
 async function startServer() {
   const app = express();
@@ -237,63 +157,6 @@ async function startServer() {
         [userId, email, passwordHash, salt, "user"]
       );
 
-      // Seed default sample data for a pleasant onboarding experience
-      for (const item of SEED_INCOME) {
-        await tx.query(
-          `INSERT INTO income_entries (id, user_id, "startDate", "endDate", trips, "onlineMinutes", "activeMinutes", "netFare", tips, taxes, "totalEarnings", notes)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-          [
-            `entry-${crypto.randomBytes(6).toString("hex")}`,
-            userId,
-            item.startDate,
-            item.endDate,
-            item.trips,
-            item.onlineMinutes,
-            item.activeMinutes,
-            item.netFare,
-            item.tips,
-            item.taxes,
-            item.totalEarnings,
-            item.notes,
-          ]
-        );
-      }
-
-      for (const item of SEED_MILEAGE) {
-        await tx.query(
-          `INSERT INTO mileage_entries (id, user_id, date, purpose, "startOdometer", "endOdometer", distance, "tripType", notes)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            `mileage-${crypto.randomBytes(6).toString("hex")}`,
-            userId,
-            item.date,
-            item.purpose,
-            item.startOdometer,
-            item.endOdometer,
-            item.distance,
-            item.tripType,
-            item.notes,
-          ]
-        );
-      }
-
-      for (const item of SEED_EXPENSES) {
-        await tx.query(
-          `INSERT INTO vehicle_expenses (id, user_id, date, category, amount, description, "gstHstEligible", "gstHstAmount")
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            `exp-${crypto.randomBytes(6).toString("hex")}`,
-            userId,
-            item.date,
-            item.category,
-            item.amount,
-            item.description,
-            item.gstHstEligible,
-            item.gstHstAmount,
-          ]
-        );
-      }
-
       await tx.query(
         "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
         [token, userId, expiresAt]
@@ -369,6 +232,7 @@ async function startServer() {
     }
 
     try {
+      if (typeof oldPassword !== "string") throw new ValidationError("Current password must be a string.");
       validatePassword(newPassword);
       const result = await db.query("SELECT * FROM users WHERE id = $1", [req.userId]);
       const user = result.rows[0];
@@ -390,7 +254,7 @@ async function startServer() {
 
       return res.json({ success: true, message: "Password changed successfully." });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return validationError(res, err);
     }
   });
 
@@ -614,12 +478,15 @@ async function startServer() {
       const mileageRes = await db.query("SELECT * FROM mileage_entries WHERE user_id = $1 ORDER BY date DESC", [req.userId]);
       const expenseRes = await db.query("SELECT * FROM vehicle_expenses WHERE user_id = $1 ORDER BY date DESC", [req.userId]);
 
+      const ratesRes = await db.query("SELECT year, tier1_threshold, tier1_rate, tier2_rate FROM cra_rates WHERE user_id = $1 ORDER BY year DESC", [req.userId]);
       const expenses = expenseRes.rows.map((item: any) => ({
         ...item,
         gstHstEligible: !!item.gstHstEligible,
       }));
 
       return res.json({
+        schemaVersion: 1,
+        craRates: ratesRes.rows,
         income: incomeRes.rows,
         mileage: mileageRes.rows,
         expenses,
@@ -630,7 +497,7 @@ async function startServer() {
   });
 
   app.post("/api/restore", requireAuth, async (req: any, res) => {
-    const { income, mileage, expenses } = req.body;
+    const { income, mileage, expenses, schemaVersion, craRates } = req.body ?? {};
     if (!Array.isArray(income) || !Array.isArray(mileage) || !Array.isArray(expenses)) {
       return res.status(400).json({ error: "Invalid backup data structure" });
     }
@@ -639,10 +506,24 @@ async function startServer() {
       if (income.length + mileage.length + expenses.length > 10_000) {
         return res.status(400).json({ error: "A backup may contain at most 10,000 records." });
       }
+      if (schemaVersion !== undefined && schemaVersion !== 1) throw new ValidationError("Unsupported backup schema version.");
+      if ((schemaVersion === 1 || craRates !== undefined) && (!Array.isArray(craRates) || craRates.length > 200)) {
+        throw new ValidationError("Backup CRA rates must be an array of at most 200 rates.");
+      }
+      const cleanRates = craRates === undefined ? undefined : craRates.map(parseCraRate);
+      if (cleanRates && new Set(cleanRates.map(rate => rate.year)).size !== cleanRates.length) throw new ValidationError("Backup contains duplicate rate years.");
       const cleanIncome = income.map(parseIncome);
       const cleanMileage = mileage.map(parseMileage);
       const cleanExpenses = expenses.map(parseExpense);
       await db.transaction(async (tx) => {
+        // Legacy, unversioned backups preserve the user's current rate settings.
+        if (cleanRates !== undefined) {
+          await tx.query("DELETE FROM cra_rates WHERE user_id = $1", [req.userId]);
+          for (const rate of cleanRates) {
+            await tx.query("INSERT INTO cra_rates (user_id, year, tier1_threshold, tier1_rate, tier2_rate) VALUES ($1, $2, $3, $4, $5)",
+              [req.userId, rate.year, rate.tier1_threshold, rate.tier1_rate, rate.tier2_rate]);
+          }
+        }
         // Clear existing data for user
         await tx.query("DELETE FROM income_entries WHERE user_id = $1", [req.userId]);
         await tx.query("DELETE FROM mileage_entries WHERE user_id = $1", [req.userId]);
@@ -748,12 +629,8 @@ async function startServer() {
   });
 
   app.post("/api/settings/cra-rates", requireAuth, async (req: any, res) => {
-    const { year, tier1_threshold, tier1_rate, tier2_rate } = req.body;
-    if (!year || isNaN(parseFloat(tier1_threshold)) || isNaN(parseFloat(tier1_rate)) || isNaN(parseFloat(tier2_rate))) {
-      return res.status(400).json({ error: "Invalid rate details provided." });
-    }
-
     try {
+      const { year, tier1_threshold, tier1_rate, tier2_rate } = parseCraRate(req.body);
       await db.query(
         `INSERT INTO cra_rates (user_id, year, tier1_threshold, tier1_rate, tier2_rate)
          VALUES ($1, $2, $3, $4, $5)
@@ -761,7 +638,7 @@ async function startServer() {
            tier1_threshold = EXCLUDED.tier1_threshold,
            tier1_rate = EXCLUDED.tier1_rate,
            tier2_rate = EXCLUDED.tier2_rate`,
-        [req.userId, year.toString(), parseFloat(tier1_threshold), parseFloat(tier1_rate), parseFloat(tier2_rate)]
+        [req.userId, year, tier1_threshold, tier1_rate, tier2_rate]
       );
 
       const result = await db.query(
@@ -770,7 +647,7 @@ async function startServer() {
       );
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return validationError(res, err);
     }
   });
 
@@ -875,14 +752,17 @@ async function startServer() {
         return res.status(400).json({ error: "Email is already taken by another user" });
       }
 
-      if (password && password.trim() !== "") {
+      if (password !== undefined && password !== "") {
         const salt = generateSalt();
         validatePassword(password);
         const passwordHash = await hashPassword(password, salt);
-        await db.query(
-          "UPDATE users SET email = $1, role = $2, password_hash = $3, salt = $4 WHERE id = $5",
-          [email, role || "user", passwordHash, salt, id]
-        );
+        await db.transaction(async tx => {
+          await tx.query(
+            "UPDATE users SET email = $1, role = $2, password_hash = $3, salt = $4 WHERE id = $5",
+            [email, role, passwordHash, salt, id]
+          );
+          await tx.query("DELETE FROM sessions WHERE user_id = $1", [id]);
+        });
       } else {
         await db.query(
           "UPDATE users SET email = $1, role = $2 WHERE id = $3",
@@ -900,7 +780,7 @@ async function startServer() {
 
       return res.json(result.rows[0]);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return validationError(res, err);
     }
   });
 
@@ -1172,4 +1052,5 @@ Provide a structured analysis in JSON format with:
 
 startServer().catch((err) => {
   console.error("Failed to start server", err);
+  process.exitCode = 1;
 });
