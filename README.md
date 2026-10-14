@@ -244,3 +244,13 @@ Compose deployment uses the external environment file described above. For direc
 │   └── types.ts            # Shared TypeScript interfaces
 └── package.json            # Project dependencies and build scripts
 ```
+
+## Regression tests
+
+Run `npm test`, `npm run typecheck`, and `npm run build` for the standard checks.
+For browser regression tests, install Chromium once with
+`npx playwright install --with-deps chromium`, then run `npm run test:e2e`.
+The browser suite starts its own server on port 4173 with an in-memory SQLite
+database and external AI disabled. Keep that port free. It checks financial-form
+save failures, retained drafts, retries, and repeated submissions. It does not use
+or alter the normal development database.
