@@ -1,0 +1,6 @@
+{
+  "name": "Gig Income Tracker",
+  "description": "A clean dashboard to log income entries, track trips, online and active hours, and monitor total earnings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

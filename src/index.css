@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;850&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+@media print {
+  /* Hide non-printable widgets and chrome layout */
+  header,
+  footer,
+  #tabs-navigation,
+  #app-footer,
+  #reset-demo-btn,
+  #export-csv-btn,
+  #print-pdf-btn,
+  #gst-hst-tracking-box,
+  #tax-profit-summary-view > div:nth-child(2) {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  main, #app-main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .shadow-xs, .shadow-md, .shadow-lg, .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  .rounded-2xl, .rounded-xl {
+    border-radius: 6px !important;
+  }
+
+  /* Force print color settings for headers and badges */
+  .bg-slate-900 {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-blue-50\/20, .bg-blue-50\/30, .bg-blue-50 {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-emerald-50\/40, .bg-emerald-50 {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}
