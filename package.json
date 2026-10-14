@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "tsx test_runner.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:api": "tsx --test tests/api.integration.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

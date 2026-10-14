@@ -10,7 +10,7 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://127.0.0.1:4173/api/health",
     reuseExistingServer: false,
-    env: { NODE_ENV: "development", PORT: "4173", DB_PATH: ":memory:",
+    env: { NODE_ENV: "development", DISABLE_HMR: "true", PORT: "4173", DB_PATH: ":memory:",
       DATABASE_URL: "postgresql://test:test@127.0.0.1:1/test", GEMINI_API_KEY: "" },
     timeout: 60_000,
   },
