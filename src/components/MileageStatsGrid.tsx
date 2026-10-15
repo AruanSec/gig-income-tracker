@@ -1,7 +1,8 @@
+import { sumMoney } from "../money";
 import React from "react";
 import { Car, Coins, Layers, HelpCircle, Wrench, Scale } from "lucide-react";
 import { MileageStats, MileageEntry, VehicleExpense } from "../types";
-import { formatCurrency, CRA_TIER1_THRESHOLD, CRA_TIER1_RATE, CRA_TIER2_RATE } from "../utils";
+import { formatCurrency } from "../utils";
 
 interface MileageStatsGridProps {
   stats: MileageStats;
@@ -10,15 +11,8 @@ interface MileageStatsGridProps {
 }
 
 export default function MileageStatsGrid({ stats, entries, expenses }: MileageStatsGridProps) {
-  // Calculate percentage of threshold reached
-  const thresholdProgress = Math.min((stats.totalKm / CRA_TIER1_THRESHOLD) * 100, 100);
-  const isOverThreshold = stats.totalKm > CRA_TIER1_THRESHOLD;
-
-  // Calculate actual expenses total
-  const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
-
-  // Combined deduction total
-  const combinedDeduction = stats.totalDeduction + totalExpenses;
+  const totalExpenses = sumMoney(expenses, item => item.amount);
+  const combinedDeduction = stats.totalDeduction;
 
   return (
     <div className="space-y-6" id="mileage-stats-container">
@@ -64,7 +58,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
               </span>
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
-              Tax write-off based on tiered rates.
+              Planning estimate using configured annual rates.
             </p>
           </div>
           <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
@@ -95,14 +89,14 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
           </div>
         </div>
 
-        {/* Combined Deductions Card */}
+        {/* Mileage Comparison Card */}
         <div 
           className="bg-slate-900 dark:bg-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-md flex items-start justify-between relative overflow-hidden group hover:border-emerald-500 transition-all duration-300"
           id="stat-card-combined-deduction"
         >
           <div className="space-y-2 relative z-10">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Combined Deductions
+              Mileage Comparison
             </span>
             <div className="flex items-baseline gap-0.5">
               <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight" id="combined-deduction-value">
@@ -110,7 +104,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
               </span>
             </div>
             <p className="text-[10px] text-slate-400 leading-normal">
-              Total write-offs (Mileage + Expenses)
+              Before eligibility and GST/HST review
             </p>
           </div>
           <div className="p-2.5 bg-emerald-950/80 text-emerald-400 rounded-xl border border-emerald-800/50 relative z-10">
@@ -121,58 +115,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
 
       </div>
 
-      {/* Cumulative Kilometer Progress Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm" id="threshold-progress-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <div>
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-              CRA Two-Tier Mileage Limit Progress
-              <span className="inline-flex items-center text-slate-400 dark:text-slate-550 cursor-help" title="CRA allows 72¢/km for the first 5,000 business km, and drops to 66¢/km thereafter.">
-                <HelpCircle className="w-4 h-4" />
-              </span>
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-450 mt-0.5">
-              Currently driving in <span className="font-semibold text-slate-700 dark:text-slate-300">{isOverThreshold ? "Tier 2 (66¢/km rate)" : "Tier 1 (72¢/km rate)"}</span>
-            </p>
-          </div>
-          <div className="text-right sm:text-right shrink-0">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-              Threshold: {CRA_TIER1_THRESHOLD.toLocaleString()} km
-            </span>
-          </div>
-        </div>
-
-        {/* Custom Range Indicator Bar */}
-        <div className="space-y-2">
-          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex" id="threshold-progress-bar-bg">
-            <div 
-              className="bg-blue-600 dark:bg-blue-500 h-full transition-all duration-500"
-              style={{ width: `${thresholdProgress}%` }}
-              id="threshold-progress-bar-fill"
-            />
-            {isOverThreshold && (
-              <div 
-                className="bg-emerald-500 dark:bg-emerald-600 h-full flex-1 transition-all duration-500 animate-pulse"
-                id="threshold-progress-bar-fill-overflow"
-              />
-            )}
-          </div>
-          
-          <div className="flex justify-between items-center text-[11px] text-slate-400 dark:text-slate-500">
-            <span className="font-medium">0 km (Start)</span>
-            {isOverThreshold ? (
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                +{ (stats.totalKm - CRA_TIER1_THRESHOLD).toLocaleString() } km beyond threshold
-              </span>
-            ) : (
-              <span className="font-medium">
-                { (CRA_TIER1_THRESHOLD - stats.totalKm).toLocaleString() } km remaining in Tier 1
-              </span>
-            )}
-            <span className="font-medium">{CRA_TIER1_THRESHOLD.toLocaleString()} km (Limit)</span>
-          </div>
-        </div>
-      </div>
+      <p className="text-sm text-slate-500">Mileage tiers reset each calendar year using that year's configured rates. Vehicle receipts and kilometre estimates are alternative planning comparisons; adding them does not establish a deduction.</p>
     </div>
   );
 }

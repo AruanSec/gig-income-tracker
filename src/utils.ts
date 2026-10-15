@@ -1,3 +1,4 @@
+import { FinancialDecimal, addMoney, sumMoney, roundMoney } from "./money";
 import { IncomeEntry, IncomeStats, MileageEntry, MileageStats, CraRate } from "./types";
 
 export function calculateStats(entries: IncomeEntry[]): IncomeStats {
@@ -19,10 +20,10 @@ export function calculateStats(entries: IncomeEntry[]): IncomeStats {
   }
 
   entries.forEach((entry) => {
-    stats.totalEarnings += entry.totalEarnings;
-    stats.totalNetFare += entry.netFare;
-    stats.totalTips += entry.tips;
-    stats.totalTaxes += entry.taxes;
+    stats.totalEarnings = addMoney(stats.totalEarnings, entry.totalEarnings);
+    stats.totalNetFare = addMoney(stats.totalNetFare, entry.netFare);
+    stats.totalTips = addMoney(stats.totalTips, entry.tips);
+    stats.totalTaxes = addMoney(stats.totalTaxes, entry.taxes);
     stats.totalTrips += entry.trips;
     stats.totalOnlineMinutes += entry.onlineMinutes;
     stats.totalActiveMinutes += entry.activeMinutes;
@@ -92,142 +93,47 @@ export function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
-export const CRA_TIER1_THRESHOLD = 5000;
-export const CRA_TIER1_RATE = 0.72;
-export const CRA_TIER2_RATE = 0.66;
+/** Only an explicitly configured matching year may supply a planning rate. */
+export function getRatesForYear(year: string, customRates: CraRate[] = []) {
+  const rate = customRates.find(rate => rate.year === year);
+  return rate ? { threshold: rate.tier1_threshold, tier1: rate.tier1_rate, tier2: rate.tier2_rate, configured: true }
+    : { threshold: 0, tier1: 0, tier2: 0, configured: false };
+}
 
-export function getRatesForYear(year: string, customRates?: CraRate[]): { threshold: number; tier1: number; tier2: number } {
-  if (customRates && customRates.length > 0) {
-    const rate = customRates.find(r => r.year === year);
-    if (rate) {
-      return {
-        threshold: rate.tier1_threshold,
-        tier1: rate.tier1_rate,
-        tier2: rate.tier2_rate
-      };
-    }
-    // Fallback to closest year
-    const sorted = [...customRates].sort((a, b) => b.year.localeCompare(a.year));
-    const closest = sorted.find(r => r.year <= year) || sorted[sorted.length - 1];
-    if (closest) {
-      return {
-        threshold: closest.tier1_threshold,
-        tier1: closest.tier1_rate,
-        tier2: closest.tier2_rate
-      };
-    }
-  }
-  // Standard CRA rates
-  return {
-    threshold: CRA_TIER1_THRESHOLD,
-    tier1: CRA_TIER1_RATE,
-    tier2: CRA_TIER2_RATE
-  };
+export function missingRateYears(entries: MileageEntry[], rates: CraRate[] = []): string[] {
+  return [...new Set(entries.map(entry => entry.date.slice(0, 4)))].filter(year => !getRatesForYear(year, rates).configured).sort();
 }
 
 export function calculateMileageStats(entries: MileageEntry[], customRates?: CraRate[]): MileageStats {
-  const stats: MileageStats = {
-    totalKm: 0,
-    tier1Km: 0,
-    tier2Km: 0,
-    totalDeduction: 0,
+  const trips = calculateTripDeductions(entries, customRates);
+  return {
+    totalKm: entries.reduce((sum, entry) => new FinancialDecimal(sum).plus(entry.distance).toNumber(), 0),
+    tier1Km: Object.values(trips).reduce((sum, trip) => new FinancialDecimal(sum).plus(trip.tier1Distance).toNumber(), 0),
+    tier2Km: Object.values(trips).reduce((sum, trip) => new FinancialDecimal(sum).plus(trip.tier2Distance).toNumber(), 0),
+    totalDeduction: sumMoney(Object.values(trips), trip => trip.deduction),
     tripCount: entries.length,
   };
-
-  if (entries.length === 0) {
-    return stats;
-  }
-
-  // Group entries by calendar year (CRA threshold resets each calendar year!)
-  const entriesByYear: Record<string, MileageEntry[]> = {};
-  entries.forEach((entry) => {
-    const year = entry.date ? entry.date.substring(0, 4) : "2026";
-    if (!entriesByYear[year]) {
-      entriesByYear[year] = [];
-    }
-    entriesByYear[year].push(entry);
-  });
-
-  // Calculate per year
-  Object.keys(entriesByYear).forEach((year) => {
-    const yearEntries = entriesByYear[year];
-    const { threshold, tier1, tier2 } = getRatesForYear(year, customRates);
-    
-    let yearTotalKm = 0;
-    yearEntries.forEach((entry) => {
-      yearTotalKm += entry.distance;
-    });
-
-    stats.totalKm += yearTotalKm;
-
-    if (yearTotalKm <= threshold) {
-      stats.tier1Km += yearTotalKm;
-      stats.totalDeduction += yearTotalKm * tier1;
-    } else {
-      stats.tier1Km += threshold;
-      const t2Km = yearTotalKm - threshold;
-      stats.tier2Km += t2Km;
-      stats.totalDeduction += (threshold * tier1) + (t2Km * tier2);
-    }
-  });
-
-  return stats;
 }
 
-/**
- * Calculates individual trip deductions chronologically, resetting thresholds per calendar year.
- * Returns a map of entry ID to its detailed split and deduction value.
+/** Allocate annual tiers before period filtering; round each trip half up to cents.
+ * Same-day ties use ID order, so filtering and API ordering cannot reallocate tiers.
+ * Missing-year estimates are excluded and must be accompanied by a visible warning.
  */
-export function calculateTripDeductions(
-  entries: MileageEntry[],
-  customRates?: CraRate[]
-): Record<string, { tier1Distance: number; tier2Distance: number; deduction: number }> {
-  // Sort entries by date (ascending) for chronological accumulation
-  const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  
+export function calculateTripDeductions(entries: MileageEntry[], customRates?: CraRate[]): Record<string, { tier1Distance: number; tier2Distance: number; deduction: number }> {
   const results: Record<string, { tier1Distance: number; tier2Distance: number; deduction: number }> = {};
-  
-  // Group sorted entries by year to track accumulated km per year separately
-  const sortedByYear: Record<string, MileageEntry[]> = {};
-  sortedEntries.forEach((entry) => {
-    const year = entry.date ? entry.date.substring(0, 4) : "2026";
-    if (!sortedByYear[year]) {
-      sortedByYear[year] = [];
-    }
-    sortedByYear[year].push(entry);
-  });
-
-  // Calculate per year chronologically
-  Object.keys(sortedByYear).forEach((year) => {
-    const yearEntries = sortedByYear[year];
-    const { threshold, tier1, tier2 } = getRatesForYear(year, customRates);
-    
-    let accumulatedKm = 0;
-    yearEntries.forEach((entry) => {
-      const d = entry.distance;
-      let t1 = 0;
-      let t2 = 0;
-
-      if (accumulatedKm >= threshold) {
-        t2 = d;
-      } else if (accumulatedKm + d <= threshold) {
-        t1 = d;
-      } else {
-        t1 = threshold - accumulatedKm;
-        t2 = d - t1;
-      }
-
-      const deduction = (t1 * tier1) + (t2 * tier2);
-      results[entry.id] = {
-        tier1Distance: t1,
-        tier2Distance: t2,
-        deduction,
-      };
-
-      accumulatedKm += d;
-    });
-  });
-
+  const accumulated: Record<string, InstanceType<typeof FinancialDecimal>> = {};
+  for (const entry of [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
+    const year = entry.date.slice(0, 4);
+    const rate = getRatesForYear(year, customRates);
+    if (!rate.configured) continue;
+    const prior = accumulated[year] || new FinancialDecimal(0);
+    const distance = new FinancialDecimal(entry.distance);
+    const remaining = FinancialDecimal.max(0, new FinancialDecimal(rate.threshold).minus(prior));
+    const tier1 = FinancialDecimal.min(distance, remaining);
+    const tier2 = distance.minus(tier1);
+    results[entry.id] = { tier1Distance: tier1.toNumber(), tier2Distance: tier2.toNumber(),
+      deduction: roundMoney(tier1.times(rate.tier1).plus(tier2.times(rate.tier2))) };
+    accumulated[year] = prior.plus(distance);
+  }
   return results;
 }
-

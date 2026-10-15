@@ -47,8 +47,8 @@ export default function CraRatesModal({ isOpen, onClose, rates, onSave }: CraRat
     setEditingYear("NEW_YEAR");
     setYearInput(new Date().getFullYear().toString());
     setThresholdInput("5000");
-    setTier1RateInput("0.72");
-    setTier2RateInput("0.66");
+    setTier1RateInput("");
+    setTier2RateInput("");
     setError(null);
     setSuccess(null);
   };

@@ -1,3 +1,4 @@
+import { addMoney, sumMoney, percentMoney, subtractMoney } from "../money";
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Calculator,
@@ -15,7 +16,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "../types";
-import { formatCurrency, calculateMileageStats } from "../utils";
+import { formatCurrency, calculateMileageStats, missingRateYears } from "../utils";
 
 interface TaxDeductionCalculatorModalProps {
   isOpen: boolean;
@@ -36,11 +37,11 @@ export default function TaxDeductionCalculatorModal({
 }: TaxDeductionCalculatorModalProps) {
   // Calculated initial values from logs
   const loggedIncome = useMemo(() => {
-    return incomeEntries.reduce((sum, e) => sum + e.netFare + e.tips, 0);
+    return sumMoney(incomeEntries, e => addMoney(e.netFare, e.tips));
   }, [incomeEntries]);
 
   const loggedExpenseTotal = useMemo(() => {
-    return vehicleExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    return sumMoney(vehicleExpenses, e => e.amount || 0);
   }, [vehicleExpenses]);
 
   const loggedMileageDeduction = useMemo(() => calculateMileageStats(mileageEntries, craRates).totalDeduction, [mileageEntries, craRates]);
@@ -80,28 +81,28 @@ export default function TaxDeductionCalculatorModal({
     if (deductionMethod === "standard_mileage") {
       return mileageDeductionInput;
     } else {
-      return (vehicleExpenseInput * businessUsePct) / 100;
+      return percentMoney(vehicleExpenseInput, businessUsePct);
     }
   }, [deductionMethod, mileageDeductionInput, vehicleExpenseInput, businessUsePct]);
 
   const totalDeductions = useMemo(() => {
-    return Math.max(0, eligibleVehicleDeduction + otherDeductionsInput);
+    return Math.max(0, addMoney(eligibleVehicleDeduction, otherDeductionsInput));
   }, [eligibleVehicleDeduction, otherDeductionsInput]);
 
   const taxableIncome = useMemo(() => {
-    return grossIncome - totalDeductions;
+    return subtractMoney(grossIncome, totalDeductions);
   }, [grossIncome, totalDeductions]);
 
   const estimatedTaxWithoutDeductions = useMemo(() => {
-    return (grossIncome * taxRate) / 100;
+    return percentMoney(grossIncome, taxRate);
   }, [grossIncome, taxRate]);
 
   const estimatedTaxWithDeductions = useMemo(() => {
-    return (Math.max(0, taxableIncome) * taxRate) / 100;
+    return percentMoney(Math.max(0, taxableIncome), taxRate);
   }, [taxableIncome, taxRate]);
 
   const taxSavings = useMemo(() => {
-    return Math.max(0, estimatedTaxWithoutDeductions - estimatedTaxWithDeductions);
+    return Math.max(0, subtractMoney(estimatedTaxWithoutDeductions, estimatedTaxWithDeductions));
   }, [estimatedTaxWithoutDeductions, estimatedTaxWithDeductions]);
 
   const effectiveSavingsPct = useMemo(() => {
@@ -119,6 +120,8 @@ export default function TaxDeductionCalculatorModal({
 
   const handleCopySummary = () => {
     const summaryText = `--- GIG DRIVER TAX DEDUCTION ESTIMATE ---
+Rate coverage: ${missingRateYears(mileageEntries, craRates).length ? `INCOMPLETE; excluded years: ${missingRateYears(mileageEntries, craRates).join(", ")}` : "Matching-year rates configured; verify rates before filing"}
+Planning only: confirm eligible deductions, business use and GST/HST. CPP, tax credits and progressive brackets are excluded.
 Gross Earnings: ${formatCurrency(grossIncome)}
 Planning Method: ${deductionMethod === "standard_mileage" ? "Per-Kilometre Planning Estimate" : `Actual Vehicle Expenses (${businessUsePct}% Business Use)`}
 Vehicle/Mileage Deduction: ${formatCurrency(eligibleVehicleDeduction)}
@@ -378,7 +381,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Business Use Percentage ({businessUsePct}%)</span>
                       <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                        Business-use estimate: {formatCurrency((vehicleExpenseInput * businessUsePct) / 100)}
+                        Business-use estimate: {formatCurrency(percentMoney(vehicleExpenseInput, businessUsePct))}
                       </span>
                     </label>
                     <input

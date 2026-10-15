@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useMemo } from "react";
 import {
   PieChart,
@@ -68,11 +69,11 @@ export default function ExpenseCategoryPieChart({ expenses }: ExpenseCategoryPie
       if (!map[cat]) {
         map[cat] = { name: cat, value: 0, count: 0 };
       }
-      map[cat].value += item.amount;
+      map[cat].value = addMoney(map[cat].value, item.amount);
       map[cat].count += 1;
     });
 
-    const total = Object.values(map).reduce((acc, curr) => acc + curr.value, 0);
+    const total = Object.values(map).reduce((acc, curr) => addMoney(acc, curr.value), 0);
 
     return Object.values(map)
       .map((item, idx) => ({
@@ -85,7 +86,7 @@ export default function ExpenseCategoryPieChart({ expenses }: ExpenseCategoryPie
   }, [filteredExpenses]);
 
   const totalExpenseAmount = useMemo(() => {
-    return categoryData.reduce((acc, c) => acc + c.value, 0);
+    return categoryData.reduce((acc, c) => addMoney(acc, c.value), 0);
   }, [categoryData]);
 
   const topCategory = categoryData[0] || null;

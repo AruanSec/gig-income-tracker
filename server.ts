@@ -1,3 +1,4 @@
+import { sumMoney } from "./src/money";
 import express from "express";
 import path from "path";
 import crypto from "crypto";
@@ -606,22 +607,6 @@ async function startServer() {
         [req.userId]
       );
       let rates = result.rows;
-      if (rates.length === 0) {
-        const defaultRates = [
-          { year: "2026", tier1_threshold: 5000, tier1_rate: 0.72, tier2_rate: 0.66 },
-          { year: "2025", tier1_threshold: 5000, tier1_rate: 0.7, tier2_rate: 0.64 },
-          { year: "2024", tier1_threshold: 5000, tier1_rate: 0.7, tier2_rate: 0.64 },
-        ];
-        for (const r of defaultRates) {
-          await db.query(
-            `INSERT INTO cra_rates (user_id, year, tier1_threshold, tier1_rate, tier2_rate)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (user_id, year) DO NOTHING`,
-            [req.userId, r.year, r.tier1_threshold, r.tier1_rate, r.tier2_rate]
-          );
-        }
-        rates = defaultRates;
-      }
       return res.json(rates);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -661,9 +646,9 @@ async function startServer() {
       const sessionsRes = await db.query("SELECT COUNT(*) as count FROM sessions");
       const craRatesRes = await db.query("SELECT COUNT(*) as count FROM cra_rates");
 
-      const earningsSumRes = await db.query('SELECT SUM("totalEarnings") as sum FROM income_entries');
+      const earningsSumRes = await db.query('SELECT "totalEarnings" FROM income_entries');
       const distanceSumRes = await db.query("SELECT SUM(distance) as sum FROM mileage_entries");
-      const expensesSumRes = await db.query("SELECT SUM(amount) as sum FROM vehicle_expenses");
+      const expensesSumRes = await db.query("SELECT amount FROM vehicle_expenses");
 
       const tables = [
         { name: "users", count: parseInt(usersRes.rows[0]?.count || "0", 10) },
@@ -679,9 +664,9 @@ async function startServer() {
         incomeCount: parseInt(incomeRes.rows[0]?.count || "0", 10),
         mileageCount: parseInt(mileageRes.rows[0]?.count || "0", 10),
         expensesCount: parseInt(expensesRes.rows[0]?.count || "0", 10),
-        totalEarnings: parseFloat(earningsSumRes.rows[0]?.sum || "0"),
+        totalEarnings: sumMoney(earningsSumRes.rows, (row: any) => row.totalEarnings),
         totalDistance: parseFloat(distanceSumRes.rows[0]?.sum || "0"),
-        totalExpenses: parseFloat(expensesSumRes.rows[0]?.sum || "0"),
+        totalExpenses: sumMoney(expensesSumRes.rows, (row: any) => row.amount),
         tables,
       });
     } catch (err: any) {
@@ -950,11 +935,11 @@ Provide a structured analysis in JSON format with:
 
       if (!process.env.GEMINI_API_KEY) {
         // Fallback statistical analysis if GEMINI_API_KEY is missing
-        const totalEarningsSum = incomeEntries.reduce((s: number, e: any) => s + (e.totalEarnings || 0), 0);
+        const totalEarningsSum = sumMoney(incomeEntries, (e: any) => e.totalEarnings || 0);
         const totalOnlineMinSum = incomeEntries.reduce((s: number, e: any) => s + (e.onlineMinutes || 0), 0);
         const totalActiveMinSum = incomeEntries.reduce((s: number, e: any) => s + (e.activeMinutes || 0), 0);
         const totalTripsSum = incomeEntries.reduce((s: number, e: any) => s + (e.trips || 0), 0);
-        const totalTipsSum = incomeEntries.reduce((s: number, e: any) => s + (e.tips || 0), 0);
+        const totalTipsSum = sumMoney(incomeEntries, (e: any) => e.tips || 0);
 
         const totalOnlineHours = totalOnlineMinSum / 60 || 1;
         const avgHourly = Math.round((totalEarningsSum / totalOnlineHours) * 100) / 100;

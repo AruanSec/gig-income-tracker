@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Calendar, Trash2, Edit2, Search, SlidersHorizontal, ChevronLeft, ChevronRight, LayoutGrid, Table, X, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -516,7 +517,7 @@ export default function IncomeList({ entries, onEdit, onDelete }: IncomeListProp
           <div className="flex items-center gap-2 text-slate-900 dark:text-slate-200 font-medium shrink-0">
             <span>Aggregated Period Earnings:</span>
             <span className="font-bold text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg font-mono shadow-xs">
-              {formatCurrency(filteredEntries.reduce((sum, e) => sum + e.totalEarnings, 0))}
+              {formatCurrency(filteredEntries.reduce((sum, e) => addMoney(sum, e.totalEarnings), 0))}
             </span>
           </div>
         </div>

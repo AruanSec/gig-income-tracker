@@ -1,3 +1,4 @@
+import { migrateSqliteMoney, migratePostgresMoney, decodeMoneyRows } from "./moneyMigration";
 import pg from "pg";
 import Database from "better-sqlite3";
 import path from "path";
@@ -122,6 +123,10 @@ export async function initDatabase(): Promise<DBClient> {
         );
       `);
 
+      const migrationClient = await pool.connect();
+      try { await migratePostgresMoney(migrationClient); }
+      finally { migrationClient.release(); }
+
       await pool.query('CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at)');
       await pool.query('CREATE INDEX IF NOT EXISTS income_user_date_idx ON income_entries (user_id, "startDate")');
       await pool.query('CREATE INDEX IF NOT EXISTS mileage_user_date_idx ON mileage_entries (user_id, date)');
@@ -131,7 +136,7 @@ export async function initDatabase(): Promise<DBClient> {
         isPostgres: true,
         async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
           const res = await pool!.query(sql, params);
-          return { rows: res.rows };
+          return { rows: decodeMoneyRows(res.rows) };
         },
         async exec(sql: string): Promise<void> {
           await pool!.query(sql);
@@ -142,7 +147,7 @@ export async function initDatabase(): Promise<DBClient> {
             isPostgres: true,
             async query<U = any>(sql: string, params: any[] = []) {
               const res = await client.query(sql, params);
-              return { rows: res.rows as U[] };
+              return { rows: decodeMoneyRows(res.rows) as U[] };
             },
             async exec(sql: string) { await client.query(sql); },
             async transaction<U>(nested: (nestedTx: DBClient) => Promise<U>) { return nested(tx); },
@@ -161,7 +166,7 @@ export async function initDatabase(): Promise<DBClient> {
         },
       };
     } catch (err: any) {
-      if (process.env.NODE_ENV === "production") throw err;
+      if (isPgActive || process.env.NODE_ENV === "production") throw err;
       console.warn("⚠️ PostgreSQL connection not reachable, falling back to local storage engine:", err.message);
     }
   }
@@ -237,6 +242,8 @@ export async function initDatabase(): Promise<DBClient> {
     );
   `);
 
+  migrateSqliteMoney(sqliteDb);
+
   sqliteDb.exec(`
     CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
     CREATE INDEX IF NOT EXISTS income_user_date_idx ON income_entries (user_id, startDate);
@@ -251,7 +258,7 @@ export async function initDatabase(): Promise<DBClient> {
       const isSelect = /^\s*SELECT/i.test(sqliteSql);
       if (isSelect) {
         const rows = sqliteDb!.prepare(sqliteSql).all(...params) as T[];
-        return { rows };
+        return { rows: decodeMoneyRows(rows) };
       } else {
         const info = sqliteDb!.prepare(sqliteSql).run(...params);
         return { rows: [] as T[] };

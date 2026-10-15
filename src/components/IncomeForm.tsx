@@ -1,3 +1,4 @@
+import { addMoney, subtractMoney } from "../money";
 import { localDateString } from "../utils";
 import { useFormSubmission } from "../hooks/useFormSubmission";
 import React, { useState, useEffect, useRef } from "react";
@@ -42,7 +43,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
   const numNetFare = parseFloat(netFare) || 0;
   const numTips = parseFloat(tips) || 0;
   const numTaxes = parseFloat(taxes) || 0;
-  const computedTotalEarnings = parseFloat((numNetFare + numTips - numTaxes).toFixed(2));
+  const computedTotalEarnings = subtractMoney(addMoney(numNetFare, numTips), numTaxes);
 
   // Initialize fields if editing
   useEffect(() => {

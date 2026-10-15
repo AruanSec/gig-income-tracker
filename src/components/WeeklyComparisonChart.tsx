@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useMemo } from "react";
 import {
   BarChart,
@@ -121,17 +122,17 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
       entries.forEach((e) => {
         // Current week match
         if (e.startDate === curDateStr || (e.startDate <= curDateStr && e.endDate >= curDateStr)) {
-          curEarnings += e.totalEarnings;
-          curFare += e.netFare;
-          curTips += e.tips;
+          curEarnings = addMoney(curEarnings, e.totalEarnings);
+          curFare = addMoney(curFare, e.netFare);
+          curTips = addMoney(curTips, e.tips);
           curTrips += e.trips;
           curOnlineMin += e.onlineMinutes;
         }
         // Previous week match
         if (e.startDate === prevDateStr || (e.startDate <= prevDateStr && e.endDate >= prevDateStr)) {
-          prevEarnings += e.totalEarnings;
-          prevFare += e.netFare;
-          prevTips += e.tips;
+          prevEarnings = addMoney(prevEarnings, e.totalEarnings);
+          prevFare = addMoney(prevFare, e.netFare);
+          prevTips = addMoney(prevTips, e.tips);
           prevTrips += e.trips;
           prevOnlineMin += e.onlineMinutes;
         }
@@ -168,8 +169,8 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
 
   // Overall Weekly Metrics & Growth Calculations
   const weeklyTotals = useMemo(() => {
-    const curTotalEarnings = comparisonData.reduce((acc, d) => acc + d.currentWeek, 0);
-    const prevTotalEarnings = comparisonData.reduce((acc, d) => acc + d.previousWeek, 0);
+    const curTotalEarnings = comparisonData.reduce((acc, d) => addMoney(acc, d.currentWeek), 0);
+    const prevTotalEarnings = comparisonData.reduce((acc, d) => addMoney(acc, d.previousWeek), 0);
 
     const curTotalHours = comparisonData.reduce((acc, d) => acc + d.currentHours, 0);
     const prevTotalHours = comparisonData.reduce((acc, d) => acc + d.previousHours, 0);
@@ -177,8 +178,8 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
     const curTotalTrips = comparisonData.reduce((acc, d) => acc + d.currentTrips, 0);
     const prevTotalTrips = comparisonData.reduce((acc, d) => acc + d.previousTrips, 0);
 
-    const curTotalTips = comparisonData.reduce((acc, d) => acc + d.currentTips, 0);
-    const prevTotalTips = comparisonData.reduce((acc, d) => acc + d.previousTips, 0);
+    const curTotalTips = comparisonData.reduce((acc, d) => addMoney(acc, d.currentTips), 0);
+    const prevTotalTips = comparisonData.reduce((acc, d) => addMoney(acc, d.previousTips), 0);
 
     // Earnings Growth Percentage
     const earningsDiff = curTotalEarnings - prevTotalEarnings;

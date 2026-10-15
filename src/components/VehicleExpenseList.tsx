@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, Wrench, Edit, Trash2, Shield, PlusCircle, Filter, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { VehicleExpense } from "../types";
@@ -98,7 +99,7 @@ export default function VehicleExpenseList({ expenses, onEdit, onDelete, onAddTr
       }
       
       groups[periodKey].expenses.push(exp);
-      groups[periodKey].total += exp.amount;
+      groups[periodKey].total = addMoney(groups[periodKey].total, exp.amount);
     });
 
     // Sort periods descending by key
@@ -109,7 +110,7 @@ export default function VehicleExpenseList({ expenses, onEdit, onDelete, onAddTr
 
   // Overall stats
   const grandTotal = useMemo(() => {
-    return filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    return filteredExpenses.reduce((acc, curr) => addMoney(acc, curr.amount), 0);
   }, [filteredExpenses]);
 
   return (

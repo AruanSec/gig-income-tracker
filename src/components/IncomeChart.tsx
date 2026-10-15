@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useMemo } from "react";
 import { TrendingUp, BarChart2, Calendar } from "lucide-react";
 import { IncomeEntry } from "../types";
@@ -56,7 +57,7 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
         };
       }
 
-      acc[monthKey].totalEarnings += entry.totalEarnings;
+      acc[monthKey].totalEarnings = addMoney(acc[monthKey].totalEarnings, entry.totalEarnings);
       acc[monthKey].trips += entry.trips;
       acc[monthKey].onlineMinutes += entry.onlineMinutes;
       acc[monthKey].activeMinutes += entry.activeMinutes;
