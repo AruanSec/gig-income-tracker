@@ -1,82 +1,73 @@
-# Exit criteria
+# Production Release Exit Criteria
 
-Status as of 2026-10-15. This checklist records completed work and proposes the remaining criteria for a production release. The release criteria below have not previously been agreed as a formal acceptance specification.
+Status: 2026-10-15. Baseline: `7b87a53`.
 
-**Current status: the ten originally failing behaviors have been fixed and verified with targeted regression checks on staging. Deployment documentation, npm cleanup, and maintained local regression suites are complete. The broader production-release requirements below remain open.** See the current verification section in [TEST_REPORT.md](TEST_REPORT.md).
+**Release readiness remains open.** Application fixes and local Docker recovery
+checks have passed. Hosted CI, tax review, production operations and remaining
+user workflows still require evidence. These are proposed release gates; checked
+items describe recorded verification, not a guarantee for every environment.
+See [TEST_REPORT.md](TEST_REPORT.md) for results and limitations.
 
-## Completed work
+## Verified application criteria
 
-- [x] Review the backend, frontend, database layer, authentication, financial calculations, and deployment configuration; prioritize recommendations.
-- [x] Run the existing unit tests: all four test groups passed.
-- [x] Run TypeScript checking and the production build: both passed. The build still reports a bundle-size warning.
-- [x] Run the original API/browser baseline: of 54 additional checks, 37 passed and 17 failed, representing 10 distinct issues. This historical result led to the fixes verified below. See [TEST_REPORT.md](TEST_REPORT.md).
-- [x] Verify income, mileage, and expense CRUD, record ownership, server-calculated derived values, and basic validation.
-- [x] Verify login/logout, ordinary-user restrictions, and revocation of other sessions after a user changes their own password.
-- [x] Verify financial-entry backup/restore, PostgreSQL transaction rollback after an injected restore failure, and persistence across an application process restart.
-- [x] Document server setup, Docker Compose, credentials, private ports, Caddy HTTPS, database backups/restores, upgrades, and troubleshooting in [README.md](README.md).
-- [x] Validate README shell syntax and the merged Compose configuration, including private database access and loopback-only application access. The server override is documented for the operator to create; it is not a committed deployment file.
-- [x] Standardize on npm: remove `bun.lock`, retain `package-lock.json`, document the choice, verify the lockfile matches the manifest, and complete an `npm ci --dry-run` check.
-- [x] Remove the temporary test services without using existing user data.
+- [x] **R1 — Calendar accuracy:** records remain in the correct accounting period
+  across year/month boundaries in UTC, Toronto and Vancouver.
+- [x] **R2 — Failed saves:** income, mileage and expense forms retain drafts,
+  display errors, permit retry and prevent repeat submission while pending.
+- [x] **R3–R5 — Input validation:** impossible dates, invalid numeric types and
+  malformed or negative CRA settings return client errors without changing data.
+- [x] **R6 — Complete backups:** versioned backups restore financial records and
+  custom rates; legacy backups preserve existing rates; invalid restores are atomic.
+- [x] **R7 — Safe API errors:** parser and validation failures return appropriate
+  client errors, conflicts return 409 and internal failures expose no database details.
+- [x] **R8 — Session revocation:** administrator password resets revoke existing
+  sessions transactionally; replacement credentials work.
+- [x] **R9 — Clean onboarding:** real accounts start empty; sample data requires
+  an explicit action.
+- [x] **R10 — Production startup:** unavailable PostgreSQL causes a nonzero exit;
+  production never falls back to SQLite.
 
-These are results from the recorded test run, not evidence that every workflow or every deployment environment passes.
+## Financial acceptance
 
-## Implemented improvements verified on staging
+- [x] **F1 — Exact CAD values:** decimal arithmetic, cent validation, database
+  storage and transactional migrations preserve financial values.
+- [ ] **F2 — Canadian tax review:** a qualified reviewer checks eligibility,
+  kilometre versus receipt comparisons, GST/HST assumptions and saved annual
+  rates against current CRA guidance. Record reviewer, date, sources, findings
+  and resolution of any corrections in [docs/FINANCIAL_POLICY.md](docs/FINANCIAL_POLICY.md).
+- [x] **F3 — Losses:** reports and exports preserve negative profit.
+- [x] **F4 — Calculation boundaries:** annual tiers, crossing trips, same-day
+  ordering, matching-year rates, missing-rate warnings and receipt rounding pass.
+- [x] **F5 — Current defaults:** report periods use current dates or available records.
 
-- [x] Preserve income, mileage, and expense drafts after failed creates or edits; show errors, allow retry, and block repeat submissions while a request is pending.
-- [x] Reject impossible dates, invalid numeric types, and malformed or negative rate settings; return HTTP 400 for invalid replacement passwords.
-- [x] Revoke existing sessions transactionally after an administrator resets a password.
-- [x] Start new accounts with empty financial ledgers; keep sample data behind the existing explicit action.
-- [x] Add versioned backups with custom CRA rates, while preserving current rates when restoring legacy backups.
-- [x] Correct calendar grouping, identify CAD, retain report cents and losses, use current-date defaults, and let the user select a planning comparison without asserting tax eligibility.
-- [x] Keep browser/API/calculation regressions in the repository and configure CI for both database backends and Chromium. Hosted CI execution remains pending.
+## Verification and operational gates
 
-## Release fixes and verification status
+| Status | ID | Exit condition and required evidence |
+|---|---|---|
+| Open | V1 | Run the maintained GitHub Actions workflow successfully. Record the workflow URL and tested commit; both database backends, migrations, Chromium and Docker deployment checks must pass. |
+| Open | V2 | Verify the final release candidate from a clean install: `npm ci`, `npm test`, `npm run typecheck`, `npm run build`, both API suites and `npm run test:e2e`. Record versions, results and candidate SHA. Earlier browser results are historical until repeated for that candidate. |
+| Passed locally | V3 | Actual image build, fresh PostgreSQL volume, signup, financial CRUD, custom rates and browser CSV export pass. Records survive app restart, database outage/recovery and Compose recreation without deleting the volume. |
+| Partial | V4 | Local dump/restore already reproduces accounts, records, rates and CSV exactly. Establish scheduled off-server backups, retention, protected backup access and failure alerts; restore an off-server copy and record recovery time and acceptable data loss. |
+| Open | V5 | On the intended server, verify DNS, HTTPS and certificate renewal, private database access, loopback app access, restart after reboot and an upgrade/rollback rehearsal. Record commands, outcomes and deployed image/commit. No server deployment has occurred. |
+| Partial | V6 | Local readiness 503 during database outage, liveness 200, reconnection and independent proxy client limits pass. Repeat using the intended Caddy topology and actual trusted proxy addresses; prove spoofed forwarding headers cannot bypass limits. |
+| Open | V7 | Record passing successful/failed saves, search/filter behavior, CSV escaping and spreadsheet-formula safety, downloads, printing, mobile layouts and keyboard navigation. If AI is enabled, verify its success/failure behavior, privacy assumptions and usage limits; otherwise document that it is disabled. |
 
-Checked items have passing targeted verification. R7 now includes safe parser, validation, conflict and internal-error responses.
+Use only disposable databases for automated API and migration tests. Follow
+[README.md](README.md) for test dependencies, proxy configuration and recovery.
+Local staging-branch checks do not establish a staging-server deployment.
 
-| Done | ID | Work remaining | Exit condition |
-|---|---|---|---|
-| [x] | R1 | Correct calendar-date handling | January 1, month boundaries, and year boundaries remain in the correct accounting period in UTC and Canadian time zones. The Toronto annual-report case exports gross income 100.00 rather than 0.00. |
-| [x] | R2 | Preserve input after failed saves | A rejected or failed save keeps the form and entered values, shows an actionable error, and allows retry. Pending submissions cannot create duplicate records. Verify income, mileage, and expense forms. |
-| [x] | R3 | Reject impossible dates | Values such as `2026-02-30` return HTTP 400 without changing records. Valid leap days are accepted. Apply the same rules to restore input. |
-| [x] | R4 | Reject invalid numeric types | Required amounts reject null, empty strings, booleans, and non-finite values with HTTP 400. Explicit numeric zero remains valid where allowed. |
-| [x] | R5 | Validate CRA rate settings | Year, threshold, and rates have explicit validation. Negative or non-finite rates and malformed years are rejected without changing saved settings. |
-| [x] | R6 | Restore all report inputs | Versioned backups include custom CRA rates as well as financial entries. A restore reproduces those settings and calculated reports; invalid input or a database failure preserves the previous data. Define handling for older backups. |
-| [x] | R7 | Return correct validation statuses | A short new password returns HTTP 400, not 500. Expected validation failures consistently use client-error responses; internal failures do not expose database or stack details. |
-| [x] | R8 | Revoke sessions after an admin password reset | Password reset and session revocation happen transactionally. Existing tokens are rejected afterward, and login with the replacement password succeeds. |
-| [x] | R9 | Separate demo and real records | New real accounts begin with empty income, mileage, and expense ledgers. Loading sample data is an explicit action and cannot silently contaminate real reports. This is a proposed product change to the current onboarding behavior. |
-| [x] | R10 | Signal unsuccessful production startup | An unavailable production database prevents the app from serving, produces a useful log, and exits with a nonzero status. SQLite is never selected as the production fallback. |
+## Release decision and evidence
 
-## Financial correctness identified during review
+Release when all open gates above pass, or the release owner explicitly records
+an accepted deferral with scope, impact and follow-up owner/date. Do not mark
+partial items complete based on documentation alone.
 
-These recommendations still need implementation and focused tests; they were not all covered by the 54 additional checks.
+For each newly completed gate, add the date, exact commit/image, environment,
+command or procedure, outcome and evidence link to `TEST_REPORT.md`. Resolve
+failures on a feature branch, integrate and verify on `staging`, then promote
+only the tested changes to `main` as required by [AGENTS.md](AGENTS.md).
 
-- [x] **F1 — Use Canadian currency consistently.** CAD display/export, decimal arithmetic, PostgreSQL `NUMERIC(15,2)` and SQLite decimal-text storage are implemented. Versioned transactional migration rounds legacy inputs to cents and recomputes earnings. SQLite and PostgreSQL tests verify preservation, repeatability and rollback. See [docs/FINANCIAL_POLICY.md](docs/FINANCIAL_POLICY.md).
-- [ ] **F2 — Make deduction comparisons conditional on eligibility.** Explicit planning selection, separate kilometre/receipt comparisons, GST/HST limits, receipt-level business-use rounding, and documented assumptions are implemented. Unsupported combined-write-off totals and automatic rate presets have been removed. A qualified Canadian tax review and verification of saved annual rates remain open; live CRA guidance was unavailable in the implementation environment.
-- [x] **F3 — Preserve financial losses.** Profit calculations and exports retain negative profit when expenses exceed revenue. Any zero floor for an estimated tax calculation is applied separately and explained.
-- [x] **F4 — Verify calculation boundaries.** Tests cover annual resets, crossing trips, stable same-day allocation, exact matching-year rates, missing-year exclusions/warnings, and late-night calendar presets. Browser checks in UTC, Toronto and Vancouver verify monthly/quarterly totals, start-date allocation for multi-day income, receipt rounding, calculator agreement, and mileage-list filtering without resetting annual tiers.
-- [x] **F5 — Remove stale reporting defaults.** Reporting defaults use the current date or available records rather than fixed June/Q2/2026 selections.
-
-## Verification and deployment still to complete
-
-- [ ] **V1 — Make regression testing repeatable.** Maintained local suites and CI configuration are complete; a hosted CI run is still pending. Move the relevant temporary API/browser checks into maintained project tests, document their dependencies, and run them in CI. Existing failures must become passing checks; `npm test` includes the original runner plus calculation and migration tests; PostgreSQL migration coverage also has an explicit CI step.
-- [ ] **V2 — Reverify the final code.** Local unit, type, build, API, and browser checks passed; clean-install verification of the final candidate in CI remains pending. Run `npm ci`, `npm test`, `npm run typecheck`, and `npm run build`, plus the maintained API/browser checks, against the release candidate. Record versions, results, and any intentionally deferred checks.
-- [x] **V3 — Exercise the full Docker deployment.** Verified locally with an actual image, isolated private ports, a fresh volume, browser CSV export, database outage/recovery and Compose recreation; see the test report. Build the actual application image and start the documented stack with a fresh PostgreSQL volume. Verify startup, signup, CRUD, exports, logs, and health behavior. Confirm financial data survives application and database-container restarts and Compose recreation without volume deletion.
-- [ ] **V4 — Verify recovery.** Local dump/restore passed with identical accounts, records, rates and browser CSV; scheduled off-server backups and retention remain open. Create a PostgreSQL dump and restore it into a separate database. Compare accounts, entries, custom rates, and resulting reports. Establish scheduled off-server backups and a tested recovery procedure.
-- [ ] **V5 — Verify server operation.** On the intended server, confirm DNS, HTTPS/certificate renewal, private database access, loopback application access, service restart after reboot, and an upgrade/rollback procedure. No server has been deployed in this work.
-- [ ] **V6 — Make readiness and proxy behavior accurate.** Readiness, reconnection, explicit proxy trust and independent client limits passed in local Docker gateway topology. Verification on the intended server remains open. Database unavailability causes readiness to fail. Configure proxy trust for the actual deployment topology and verify that one user's authentication attempts do not incorrectly exhaust every user's IP limit.
-- [ ] **V7 — Check remaining user workflows.** Verify successful and failed saves, searching/filtering, CSV escaping and safe downloads, printing, and key mobile/keyboard workflows. Validate external AI behavior separately if it will be enabled; the recorded tests disabled external AI calls.
-
-## Follow-up improvements
-
-These are recommended improvements rather than additional confirmed failures from the recorded test run. Decide their release priority separately.
-
-- [ ] Split large server and React modules into routes, data hooks, and pure calculation functions; progressively enable TypeScript strictness.
-- [ ] Add versioned database migrations and constraints for financial invariants.
-- [ ] Review session storage: HttpOnly/Secure/SameSite cookies with appropriate CSRF protection, hashed session tokens, and expired-session cleanup.
-- [ ] Add bounded/shared rate limiting where needed and usage limits for paid AI calls; distinguish generic fallback advice from data-derived findings.
-- [ ] Lazy-load heavy screens/charts and measure whether the current approximately 1.17 MB JavaScript bundle meets the intended performance target.
-
-## Release decision
-
-The proposed release is complete when R1–R10, F1–F5, and V1–V7 pass with recorded evidence, or any deferred item has an explicit agreed scope and acceptance decision. Documentation completion and a successful build alone do not establish production readiness. Update this checklist and the test report when fixes are verified.
+Module refactoring, broader TypeScript strictness, session-storage redesign and
+bundle-size reduction remain follow-up improvements. Shared rate limiting is
+required before running multiple application instances; current limits are per
+process. The existing approximately 1.20 MB JavaScript bundle warning remains.
