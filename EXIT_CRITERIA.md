@@ -1,6 +1,6 @@
 # Exit criteria
 
-Status as of 2026-10-14. This checklist records completed work and proposes the remaining criteria for a production release. The release criteria below have not previously been agreed as a formal acceptance specification.
+Status as of 2026-10-15. This checklist records completed work and proposes the remaining criteria for a production release. The release criteria below have not previously been agreed as a formal acceptance specification.
 
 **Current status: the ten originally failing behaviors have been fixed and verified with targeted regression checks on staging. Deployment documentation, npm cleanup, and maintained local regression suites are complete. The broader production-release requirements below remain open.** See the current verification section in [TEST_REPORT.md](TEST_REPORT.md).
 
@@ -32,7 +32,7 @@ These are results from the recorded test run, not evidence that every workflow o
 
 ## Release fixes and verification status
 
-Checked items have passing targeted verification. R7 remains open for broader error-response consistency even though the original password-status failure is fixed.
+Checked items have passing targeted verification. R7 now includes safe parser, validation, conflict and internal-error responses.
 
 | Done | ID | Work remaining | Exit condition |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Checked items have passing targeted verification. R7 remains open for broader er
 | [x] | R4 | Reject invalid numeric types | Required amounts reject null, empty strings, booleans, and non-finite values with HTTP 400. Explicit numeric zero remains valid where allowed. |
 | [x] | R5 | Validate CRA rate settings | Year, threshold, and rates have explicit validation. Negative or non-finite rates and malformed years are rejected without changing saved settings. |
 | [x] | R6 | Restore all report inputs | Versioned backups include custom CRA rates as well as financial entries. A restore reproduces those settings and calculated reports; invalid input or a database failure preserves the previous data. Define handling for older backups. |
-| [ ] | R7 | Return correct validation statuses | A short new password returns HTTP 400, not 500. Expected validation failures consistently use client-error responses; internal failures do not expose database or stack details. |
+| [x] | R7 | Return correct validation statuses | A short new password returns HTTP 400, not 500. Expected validation failures consistently use client-error responses; internal failures do not expose database or stack details. |
 | [x] | R8 | Revoke sessions after an admin password reset | Password reset and session revocation happen transactionally. Existing tokens are rejected afterward, and login with the replacement password succeeds. |
 | [x] | R9 | Separate demo and real records | New real accounts begin with empty income, mileage, and expense ledgers. Loading sample data is an explicit action and cannot silently contaminate real reports. This is a proposed product change to the current onboarding behavior. |
 | [x] | R10 | Signal unsuccessful production startup | An unavailable production database prevents the app from serving, produces a useful log, and exits with a nonzero status. SQLite is never selected as the production fallback. |
@@ -61,10 +61,10 @@ These recommendations still need implementation and focused tests; they were not
 
 - [ ] **V1 — Make regression testing repeatable.** Maintained local suites and CI configuration are complete; a hosted CI run is still pending. Move the relevant temporary API/browser checks into maintained project tests, document their dependencies, and run them in CI. Existing failures must become passing checks; `npm test` includes the original runner plus calculation and migration tests; PostgreSQL migration coverage also has an explicit CI step.
 - [ ] **V2 — Reverify the final code.** Local unit, type, build, API, and browser checks passed; clean-install verification of the final candidate in CI remains pending. Run `npm ci`, `npm test`, `npm run typecheck`, and `npm run build`, plus the maintained API/browser checks, against the release candidate. Record versions, results, and any intentionally deferred checks.
-- [ ] **V3 — Exercise the full Docker deployment.** Build the actual application image and start the documented stack with a fresh PostgreSQL volume. Verify startup, signup, CRUD, exports, logs, and health behavior. Confirm financial data survives application and database-container restarts and Compose recreation without volume deletion.
-- [ ] **V4 — Verify recovery.** Create a PostgreSQL dump and restore it into a separate database. Compare accounts, entries, custom rates, and resulting reports. Establish scheduled off-server backups and a tested recovery procedure.
+- [x] **V3 — Exercise the full Docker deployment.** Verified locally with an actual image, isolated private ports, a fresh volume, browser CSV export, database outage/recovery and Compose recreation; see the test report. Build the actual application image and start the documented stack with a fresh PostgreSQL volume. Verify startup, signup, CRUD, exports, logs, and health behavior. Confirm financial data survives application and database-container restarts and Compose recreation without volume deletion.
+- [ ] **V4 — Verify recovery.** Local dump/restore passed with identical accounts, records, rates and browser CSV; scheduled off-server backups and retention remain open. Create a PostgreSQL dump and restore it into a separate database. Compare accounts, entries, custom rates, and resulting reports. Establish scheduled off-server backups and a tested recovery procedure.
 - [ ] **V5 — Verify server operation.** On the intended server, confirm DNS, HTTPS/certificate renewal, private database access, loopback application access, service restart after reboot, and an upgrade/rollback procedure. No server has been deployed in this work.
-- [ ] **V6 — Make readiness and proxy behavior accurate.** Database unavailability causes readiness to fail. Configure proxy trust for the actual deployment topology and verify that one user's authentication attempts do not incorrectly exhaust every user's IP limit.
+- [ ] **V6 — Make readiness and proxy behavior accurate.** Readiness, reconnection, explicit proxy trust and independent client limits passed in local Docker gateway topology. Verification on the intended server remains open. Database unavailability causes readiness to fail. Configure proxy trust for the actual deployment topology and verify that one user's authentication attempts do not incorrectly exhaust every user's IP limit.
 - [ ] **V7 — Check remaining user workflows.** Verify successful and failed saves, searching/filtering, CSV escaping and safe downloads, printing, and key mobile/keyboard workflows. Validate external AI behavior separately if it will be enabled; the recorded tests disabled external AI calls.
 
 ## Follow-up improvements

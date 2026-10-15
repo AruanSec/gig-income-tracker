@@ -1,5 +1,46 @@
 # Test report
 
+## API reliability and Docker recovery verification (2026-10-15)
+
+Implemented on `feature/api-reliability-and-deployment-verification` and verified
+on `staging`. Node 22.22.1, PostgreSQL 16.15 and Playwright 1.64.0 were used;
+Docker builds use Node 22 Bookworm. All databases and volumes were disposable.
+
+| Check on staging | Result |
+|---|---|
+| `npm test` with disposable `TEST_DATABASE_URL` | PASS: original four groups and all 20 tests, no skips |
+| `npm run typecheck` | PASS |
+| `npm run build` | PASS; existing approximately 1.20 MB JavaScript bundle warning |
+| `npm run test:api`, SQLite and PostgreSQL | PASS on each: 13 scenarios plus production startup failure check |
+| `npm run test:deployment` | PASS: real image build, clean `npm ci`, fresh-volume startup and recovery |
+| Compose, deployment-script syntax, README shell examples, workflow YAML and whitespace | PASS |
+
+API coverage verifies safe validation/parser responses, generic internal errors,
+conflict handling, admin input validation and JSON API 404s. Proxy tests verify
+ignored untrusted forwarding headers, explicit trusted proxies, distinct client
+limits, spoofed-chain rejection and bounded limiter state. Rate limits remain
+per process; multiple instances require a shared limiter.
+
+The deployment check verifies private ports, a non-root runtime, signup, financial
+CRUD, custom rates and browser CSV export in Toronto time. App restart and
+Compose recreation preserve records. Stopping PostgreSQL causes readiness 503
+and Docker unhealthy status while liveness remains 200; the same process
+recovers when the database returns. Only readiness queries have a query timeout;
+financial writes and migrations have no new client-side query timeout.
+
+A custom-format PostgreSQL dump was restored into a separate database. Both
+accounts could log in, and JSON backups and browser CSV reports matched exactly.
+Test containers, networks and volumes were removed afterward.
+
+Initial builds failed because HTTP package repositories were unreachable and the
+slim builder lacked HTTPS certificates. The final builder uses the standard
+Node Bookworm image with compiler tools and certificates; runtime remains slim.
+The full 21-case browser suite from the financial verification below was not
+repeated; the current deployment check exercises real-image browser CSV export.
+Hosted CI, intended-server deployment/HTTPS/reboot checks, scheduled off-server
+backups and qualified Canadian tax review remain open. Local Docker verification
+is not a deployment to a staging server.
+
 ## Financial accuracy verification (2026-10-14)
 
 Implemented on `feature/exact-money-and-reporting-policy` and integrated into
