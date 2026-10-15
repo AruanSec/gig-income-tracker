@@ -64,10 +64,10 @@ try {
 `, { mode: 0o600 });
   dc(['config', '--quiet']);
   dc(['build', 'tax-mileage-app'], { stdio: 'inherit' });
-  dc(['up', '-d', '--wait', 'postgres'], { stdio: 'inherit' });
+  dc(['up', '-d', '--wait', '--wait-timeout', '120', 'postgres'], { stdio: 'inherit' });
   const network = Object.entries(inspect(id('postgres')).NetworkSettings.Networks)[0];
   env.TRUST_PROXY = `${network[1].Gateway}/32`;
-  dc(['up', '-d', '--wait'], { stdio: 'inherit' });
+  dc(['up', '-d', '--wait', '--wait-timeout', '120'], { stdio: 'inherit' });
   await waitFor(async () => (await health(base)).status === 200, 'initial readiness');
   const dbInspect = inspect(id('postgres')); const appInspect = inspect(id('tax-mileage-app'));
   assert.deepEqual(dbInspect.HostConfig.PortBindings || {}, {});
@@ -121,9 +121,9 @@ try {
   await waitFor(() => inspect(appId).State.Health.Status === 'healthy', 'healthy container after database recovery');
   assert.deepEqual(await api(base, 'GET', '/api/backup', token), before);
   dc(['down'], { stdio: 'inherit' }); // Preserve this test project's fresh volume.
-  dc(['up', '-d', '--wait', 'postgres'], { stdio: 'inherit' });
+  dc(['up', '-d', '--wait', '--wait-timeout', '120', 'postgres'], { stdio: 'inherit' });
   env.TRUST_PROXY = `${Object.values(inspect(id('postgres')).NetworkSettings.Networks)[0].Gateway}/32`;
-  dc(['up', '-d', '--wait'], { stdio: 'inherit' });
+  dc(['up', '-d', '--wait', '--wait-timeout', '120'], { stdio: 'inherit' });
   assert.deepEqual(await api(base, 'GET', '/api/backup', token), before);
   console.log('PASS: app restart, database outage/recovery and Compose recreation preserve data');
 

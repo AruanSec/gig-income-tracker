@@ -7,6 +7,7 @@ const { Pool } = pg;
 
 export interface DBClient {
   isPostgres: boolean;
+  checkHealth(): Promise<void>;
   query<T = any>(sql: string, params?: any[]): Promise<{ rows: T[] }>;
   exec(sql: string): Promise<void>;
   transaction<T>(fn: (tx: DBClient) => Promise<T>): Promise<T>;
@@ -31,7 +32,6 @@ if (databaseUrl || postgresHost || process.env.NODE_ENV === "production" || proc
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30000,
     max: 20,
-    query_timeout: 5000,
   });
 } else {
   // Default to PostgreSQL connection pool targeting localhost
@@ -40,7 +40,6 @@ if (databaseUrl || postgresHost || process.env.NODE_ENV === "production" || proc
     connectionTimeoutMillis: 3000,
     idleTimeoutMillis: 30000,
     max: 20,
-    query_timeout: 5000,
   });
 }
 
@@ -140,6 +139,7 @@ export async function initDatabase(): Promise<DBClient> {
 
       return {
         isPostgres: true,
+        async checkHealth() { await pool!.query({ text: "SELECT 1", query_timeout: 3000 }); },
         async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
           const res = await pool!.query(sql, params);
           return { rows: decodeMoneyRows(res.rows) };
@@ -151,6 +151,7 @@ export async function initDatabase(): Promise<DBClient> {
           const client = await pool!.connect();
           const tx: DBClient = {
             isPostgres: true,
+            async checkHealth() { await client.query({ text: "SELECT 1", query_timeout: 3000 }); },
             async query<U = any>(sql: string, params: any[] = []) {
               const res = await client.query(sql, params);
               return { rows: decodeMoneyRows(res.rows) as U[] };
@@ -259,6 +260,7 @@ export async function initDatabase(): Promise<DBClient> {
 
   return {
     isPostgres: false,
+    async checkHealth() { sqliteDb!.prepare("SELECT 1").get(); },
     async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
       const sqliteSql = convertPgParamsToSqlite(sql);
       const isSelect = /^\s*SELECT/i.test(sqliteSql);

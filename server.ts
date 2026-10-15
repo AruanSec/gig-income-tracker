@@ -122,7 +122,7 @@ async function startServer() {
   app.get("/api/health", async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
-      await db.query("SELECT 1");
+      await db.checkHealth();
       res.json({ status: "ok", database: db.isPostgres ? "PostgreSQL" : "SQLite Fallback" });
     } catch {
       res.status(503).json({ status: "unavailable", database: db.isPostgres ? "PostgreSQL" : "SQLite Fallback" });
