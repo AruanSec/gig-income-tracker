@@ -1,5 +1,8 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
+# Native SQLite compilation is a fallback when no prebuilt binary is available.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+ENV npm_config_nodedir=/usr/local
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

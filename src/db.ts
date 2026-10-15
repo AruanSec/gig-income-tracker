@@ -31,6 +31,7 @@ if (databaseUrl || postgresHost || process.env.NODE_ENV === "production" || proc
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30000,
     max: 20,
+    query_timeout: 5000,
   });
 } else {
   // Default to PostgreSQL connection pool targeting localhost
@@ -39,8 +40,13 @@ if (databaseUrl || postgresHost || process.env.NODE_ENV === "production" || proc
     connectionTimeoutMillis: 3000,
     idleTimeoutMillis: 30000,
     max: 20,
+    query_timeout: 5000,
   });
 }
+
+// An idle connection may fail during a database restart. Keep the process alive
+// so readiness can report the outage and the pool can reconnect afterward.
+pool?.on("error", error => console.error("PostgreSQL idle connection error:", error));
 
 // Translate PostgreSQL parameterized queries ($1, $2, ...) to SQLite (?) if fallback is needed
 function convertPgParamsToSqlite(sql: string): string {

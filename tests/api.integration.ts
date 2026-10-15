@@ -52,6 +52,12 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
     const mileage = { date: "2026-01-01", purpose: "Delivery", startOdometer: 100, endOdometer: 120, tripType: "Delivery" };
     const expense = { date: "2026-01-01", category: "Fuel", amount: 20, description: "Test fuel", gstHstEligible: true, gstHstAmount: 2 };
     const rate = { year: "2026", tier1_threshold: 5000, tier1_rate: 0.8, tier2_rate: 0.7 };
+    await t.test("malformed and non-object JSON produce safe JSON errors", async () => {
+      for (const body of ["{broken", "[]", "null"]) {
+        const response = await fetch(base + "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+        assert.equal(response.status, 400); assert.deepEqual(Object.keys(await response.json()), ["error"]);
+      }
+    });
     await t.test("real accounts start with empty financial ledgers", async () => {
       for (const resource of ["income", "mileage", "expenses"]) assert.deepEqual((await api("GET", `/api/${resource}`, undefined, token)).body, []);
     });
@@ -116,6 +122,23 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
       assert.equal((await api("POST", "/api/auth/change-password", { oldPassword: password, newPassword: "New-test-password-2026" }, token)).status, 200);
       assert.equal((await api("GET", "/api/auth/me", undefined, second.body.token)).status, 401);
     });
+    await t.test("database errors are hidden and health checks execute without authentication", async () => {
+      const pool = url ? new pg.Pool({ connectionString: url }) : null;
+      const sqlite = url ? null : new Database(dbPath);
+      const change = async (sql: string) => { if (pool) await pool.query(sql); else sqlite!.exec(sql); };
+      try {
+        await change("ALTER TABLE income_entries RENAME TO private_failure_detail");
+        const failed = await api("GET", "/api/income", undefined, token);
+        assert.equal(failed.status, 500);
+        assert.deepEqual(failed.body, { error: "An unexpected server error occurred." });
+        assert.equal((await api("GET", "/api/health")).status, 200);
+        assert.equal((await api("GET", "/api/live")).status, 200);
+        assert.equal((await api("GET", "/api/no-such-endpoint")).status, 404);
+      } finally {
+        await change("ALTER TABLE private_failure_detail RENAME TO income_entries");
+        sqlite?.close(); if (pool) await pool.end();
+      }
+    });
     await t.test("admin password reset invalidates existing sessions", async () => {
       if (url) {
         const pool = new pg.Pool({ connectionString: url });
@@ -125,6 +148,9 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
       }
       const otherEmail = `reset-${suffix}@example.test`;
       const other = await api("POST", "/api/auth/signup", { email: otherEmail, password });
+      for (const data of [{ email: "bad", password, role: "user" }, { email: "valid@example.test", password: "short", role: "user" }, { email: "valid@example.test", password, role: "root" }]) {
+        assert.equal((await api("POST", "/api/admin/users", data, token)).status, 400);
+      }
       const users = (await api("GET", "/api/admin/users", undefined, token)).body;
       const target = users.find((u: any) => u.email === otherEmail);
       assert.equal((await api("PUT", `/api/admin/users/${target.id}`, { email: otherEmail, role: "user", password: "Reset-test-password-2026" }, token)).status, 200);

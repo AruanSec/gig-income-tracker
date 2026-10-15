@@ -69,7 +69,7 @@ Run this step once for a new deployment. Keep the file for later restarts and up
 
 Leave `GEMINI_API_KEY` empty to use local statistical insights, or set a real key to enable external AI analysis. The application sends income information, including notes, to Gemini when that analysis runs.
 
-Compose reads this file through `--env-file` and supplies the application with `DATABASE_URL`, `NODE_ENV=production`, and `PORT=3000`. Keep credentials out of source control and the project directory; the current `.dockerignore` does not exclude environment files.
+Compose reads this file through `--env-file` and supplies the application with `DATABASE_URL`, `NODE_ENV=production`, and `PORT=3000`. Keep credentials out of source control and the project directory. The Docker build context excludes `.env*` (except `.env.example`), `.npmrc`, and database dumps.
 
 ### 3. Keep application and database ports private
 
@@ -95,7 +95,35 @@ dc() {
 }
 ```
 
-### 4. Build, start, and verify
+### 4. Configure the trusted host proxy
+
+`TRUST_PROXY` defaults to empty: forwarded headers are ignored. For the documented
+host-Caddy → loopback-published Docker app topology, trust only the Docker bridge
+gateway seen by the app. Start the database to create the network, then inspect it:
+
+```bash
+dc up -d postgres
+db_container_id=$(dc ps -q postgres)
+docker inspect "$db_container_id" --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'
+```
+
+Add the displayed gateway as an exact address to the external environment file,
+for example `TRUST_PROXY=172.18.0.1/32`. Use the actual result, not this example.
+Then build/start the app below. If you recreate the network, check the gateway
+again and recreate the app if it changed. For a direct Node.js app behind Caddy
+on the same host, use the exact loopback addresses, for example
+`TRUST_PROXY=127.0.0.1/32,::1/128`.
+
+Only explicit IP addresses and nonzero CIDR ranges are accepted. Never use
+`true`, a hop count, or a blanket subnet to trust arbitrary forwarding headers.
+Keep the app port private: a caller reaching it from a trusted proxy address can
+supply forwarded client addresses. With the documented single Caddy proxy, each
+client has its own authentication limit (20 attempts per 15 minutes); a spoofed
+address prepended to an untrusted client address cannot bypass that limit.
+The bounded limiter is per process and resets after restart; multiple app
+instances require a shared limiter before scaling out.
+
+### 5. Build, start, and verify
 
 ```bash
 dc config --quiet
@@ -105,11 +133,11 @@ dc logs --tail=100 tax-mileage-app postgres
 curl --fail http://127.0.0.1:3000/api/health
 ```
 
-The health response should contain `"status":"ok"` and `"database":"PostgreSQL"`. Compose waits for PostgreSQL's startup health check before starting the app. Tables are created automatically on application startup. The health endpoint reports the configured database engine; it does not execute a database query on every request.
+The health response should contain `"status":"ok"` and `"database":"PostgreSQL"`. Compose waits for PostgreSQL's startup health check before starting the app. Tables are created automatically on application startup. `/api/health` executes a database query and returns HTTP 503 during an outage; responses are not cached. Compose uses it to mark app readiness. `/api/live` checks only that the HTTP process responds. Idle database connection failures do not terminate the process; the pool reconnects when PostgreSQL returns. An unhealthy status alone does not make Docker restart a running container.
 
 Both services use `restart: unless-stopped`. Keep the project directory/name consistent across deployments so Compose reuses the same named volume. `dc down` preserves database data; **`dc down -v` deletes the database volume**.
 
-### 5. Enable HTTPS with Caddy
+### 6. Enable HTTPS with Caddy
 
 For a dedicated Caddy installation, put the following in `/etc/caddy/Caddyfile`, replacing the domain. If Caddy already serves other sites, add this site block to its existing configuration:
 
@@ -180,7 +208,7 @@ dc down
 - **Caddy returns 502:** check `dc ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
 - **PostgreSQL authentication fails:** check the environment file and database logs. Existing volumes keep their original database credentials even if the environment file changes.
 - **Application repeatedly exits:** production requires reachable PostgreSQL and does not fall back to SQLite. Startup failures exit with a nonzero status; inspect logs and the health URL to diagnose the cause.
-- **All users receive authentication rate limits:** the current app uses an in-memory IP limiter and does not configure Express to trust a reverse proxy, so requests through Caddy can share its IP-based limit. Configure proxy trust for your specific network before relying on per-user IP limits at scale.
+- **All users receive authentication rate limits:** verify `TRUST_PROXY` matches the actual gateway/proxy address and recreate the app after changing it. Keep direct access private. Limits are per process; restart clears them. Multi-instance deployments need a shared limiter.
 - **Certificate setup fails:** check DNS, firewall rules, and `sudo journalctl -u caddy --no-pager -n 100`.
 
 ---
@@ -222,6 +250,7 @@ Compose deployment uses the external environment file described above. For direc
 | `POSTGRES_PASSWORD` | `postgres` in Compose | Set a strong password before the first startup |
 | `POSTGRES_DB` | `tax_mileage_db` | Database name |
 | `POSTGRES_HOST` / `POSTGRES_PORT` | Host-dependent / `5432` | Alternative database connection configuration; Compose supplies these |
+| `TRUST_PROXY` | Empty (forwarded headers ignored) | Comma-separated trusted proxy IP addresses/CIDRs; configure for the actual topology |
 | `DB_PATH` | `database.db` | Development-only SQLite fallback path |
 | `GEMINI_API_KEY` | — | Optional; enables external AI insights |
 
@@ -273,3 +302,22 @@ assumptions. Back up the database before upgrading: startup migrates existing
 financial values to decimal storage and recomputes earnings from rounded inputs.
 New accounts must configure verified rates for each mileage year. Existing saved
 rates are preserved and should be reviewed; another year's rate is never reused.
+
+## Deployment and recovery regression
+
+After `npm ci` and `npx playwright install --with-deps chromium`, run
+`npm run test:deployment` with Docker Engine and Compose 2.24.4 or newer available.
+The test builds the real production image and creates a unique Compose project,
+a fresh PostgreSQL volume, private ports, and disposable accounts. It checks
+CRUD, browser CSV reports, gateway proxy trust, database outage/readiness,
+restarts and Compose recreation, then restores a dump into a separate database
+and compares accounts, records, custom rates and reports. It removes only its
+own containers, network, temporary dump and test volume, even after a failure.
+No live database or normal development database is used. Hosted CI has a separate
+job for this test; configuration alone is not evidence of a completed hosted run.
+
+The verified dump/restore path does not configure scheduled off-server backups.
+Operators still need to schedule dumps, encrypt and copy them off-server, set a
+retention policy, monitor failures and periodically restore into a separate
+non-production database. Server DNS, HTTPS, reboot and rollback checks must be
+performed on the intended host before release.
