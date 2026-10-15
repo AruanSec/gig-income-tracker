@@ -1,6 +1,47 @@
 # Test report
 
-## Current verification after fixes (2026-10-14)
+## Financial accuracy verification (2026-10-14)
+
+Implemented on `feature/exact-money-and-reporting-policy` and integrated into
+`staging` before promotion. Runtime: Node 22.22.1, PostgreSQL 16.15 and
+Playwright 1.64.0. Test services used disposable data; the normal development
+database was not opened or migrated.
+
+| Check on staging | Result |
+|---|---|
+| `npm test` with `TEST_DATABASE_URL` targeting disposable PostgreSQL | PASS: original four groups plus 15 calculation/migration tests, no skips |
+| `npm run typecheck` | PASS |
+| `npm run build` | PASS; existing bundle-size warning remains (approximately 1.20 MB JavaScript) |
+| `npm run test:api` with isolated SQLite | PASS: 11 API scenarios plus production startup failure check |
+| `npm run test:api` with disposable PostgreSQL | PASS: same API coverage using the final production server build |
+| `npm run test:e2e` | PASS: 21 Chromium checks |
+| Workflow YAML, dependency lockfile agreement and `git diff --check` | PASS |
+
+Money regressions cover exact decimal sums, positive/negative rounding ties,
+sub-cent rejection, numeric API round trips and signed profit. Both database
+migration suites preserve records, recalculate legacy earnings, repeat safely
+and roll back both financial tables after an invalid legacy amount.
+
+Boundary coverage includes annual tier resets, fractional crossing trips,
+stable same-day ordering, missing-year exclusions, and late-night presets in
+UTC/Toronto/Vancouver. Browser checks verify monthly and quarterly reports,
+multi-day income assigned to its start year, receipt-level business use,
+calculator agreement, retained annual usage after trip-list filtering,
+and visible/exported incomplete-rate warnings.
+
+The initial browser attempt timed out during server startup under concurrent
+checks. A subsequent preliminary run passed the six financial checks and one
+save regression before being intentionally stopped to integrate review fixes.
+The final complete run above passed. Local Chromium used the existing temporary
+library/font configuration documented by the prior test environment.
+
+See [docs/FINANCIAL_POLICY.md](docs/FINANCIAL_POLICY.md) for migration and rounding
+rules. Back up before upgrade: legacy sub-cent rounding requires the original
+backup to reverse. Existing saved rates remain unchanged and need review; new
+accounts configure their own matching-year rates. A qualified Canadian tax review,
+current-rate certification, hosted CI execution and deployment remain pending.
+
+## Earlier verification before the financial-accuracy follow-up (2026-10-14)
 
 All ten behaviors that failed in the original baseline now have passing targeted checks. The original 54-check results are retained below as historical evidence, not as the current failure count.
 
