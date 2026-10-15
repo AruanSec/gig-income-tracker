@@ -6,3 +6,9 @@ dist
 *.db-journal
 npm-debug.log
 .DS_Store
+
+.env*
+!.env.example
+.npmrc
+*.dump
+*.sql

@@ -1,5 +1,7 @@
-FROM node:22-bookworm-slim AS build
+FROM node:22-bookworm AS build
 WORKDIR /app
+# Native SQLite compilation is a fallback when no prebuilt binary is available.
+ENV npm_config_nodedir=/usr/local
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

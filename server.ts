@@ -1,3 +1,4 @@
+import { configureProxy, authenticationRateLimit, apiError, requestErrorHandler } from "./src/httpPolicy";
 import { sumMoney } from "./src/money";
 import express from "express";
 import path from "path";
@@ -56,6 +57,7 @@ function generateToken(): string {
 async function startServer() {
   const app = express();
   app.disable("x-powered-by");
+  configureProxy(app);
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
@@ -63,29 +65,15 @@ async function startServer() {
     next();
   });
   app.use(express.json({ limit: "2mb" }));
+  app.use("/api", (req, res, next) => {
+    if (Array.isArray(req.body)) { res.status(400).json({ error: "A JSON object is required." }); return; }
+    next();
+  });
 
   // Initialize PostgreSQL / resilient DB layer
   const db: DBClient = await initDatabase();
 
-  const authAttempts = new Map<string, { count: number; resetAt: number }>();
-  const authRateLimit: express.RequestHandler = (req, res, next) => {
-    const key = req.ip || req.socket.remoteAddress || "unknown";
-    const now = Date.now();
-    const current = authAttempts.get(key);
-    if (!current || current.resetAt <= now) {
-      authAttempts.set(key, { count: 1, resetAt: now + 15 * 60_000 });
-      return next();
-    }
-    if (current.count >= 20) return res.status(429).json({ error: "Too many authentication attempts. Try again later." });
-    current.count += 1;
-    next();
-  };
-
-  const validationError = (res: express.Response, error: unknown) => {
-    if (error instanceof ValidationError) return res.status(400).json({ error: error.message });
-    console.error(error);
-    return res.status(500).json({ error: "An unexpected server error occurred." });
-  };
+  const authRateLimit = authenticationRateLimit();
 
   // Request Auth Middleware
   const requireAuth = async (req: any, res: any, next: any) => {
@@ -111,7 +99,7 @@ async function startServer() {
       req.userId = session.user_id;
       next();
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   };
 
@@ -125,14 +113,25 @@ async function startServer() {
         }
         next();
       } catch (err: any) {
-        return res.status(500).json({ error: err.message });
+        return apiError(res, err);
       }
     });
   };
 
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
-    res.json({ status: "ok", database: db.isPostgres ? "PostgreSQL" : "SQLite Fallback" });
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      await db.checkHealth();
+      res.json({ status: "ok", database: db.isPostgres ? "PostgreSQL" : "SQLite Fallback" });
+    } catch {
+      res.status(503).json({ status: "unavailable", database: db.isPostgres ? "PostgreSQL" : "SQLite Fallback" });
+    }
+  });
+
+  app.get("/api/live", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ status: "ok" });
   });
 
   // Auth API
@@ -166,7 +165,7 @@ async function startServer() {
 
       return res.status(201).json({ token, email });
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -198,7 +197,7 @@ async function startServer() {
 
       return res.json({ token, email });
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -208,7 +207,7 @@ async function startServer() {
       const token = authHeader.split(" ")[1];
       try {
         await db.query("DELETE FROM sessions WHERE id = $1", [token]);
-      } catch (e) {}
+      } catch (error) { return apiError(res, error); }
     }
     return res.json({ success: true });
   });
@@ -222,12 +221,12 @@ async function startServer() {
       }
       return res.json({ email: user.email, role: user.role || "user" });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
   app.post("/api/auth/change-password", requireAuth, async (req: any, res) => {
-    const { oldPassword, newPassword } = req.body;
+    const { oldPassword, newPassword } = req.body ?? {};
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ error: "Current password and new password are required." });
     }
@@ -255,7 +254,7 @@ async function startServer() {
 
       return res.json({ success: true, message: "Password changed successfully." });
     } catch (err: any) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -268,7 +267,7 @@ async function startServer() {
       );
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -285,7 +284,7 @@ async function startServer() {
       const result = await db.query("SELECT * FROM income_entries WHERE id = $1", [id]);
       return res.status(201).json(result.rows[0]);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -308,7 +307,7 @@ async function startServer() {
       const result = await db.query("SELECT * FROM income_entries WHERE id = $1", [id]);
       return res.json(result.rows[0]);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -322,7 +321,7 @@ async function startServer() {
       await db.query("DELETE FROM income_entries WHERE id = $1 AND user_id = $2", [id, req.userId]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -335,7 +334,7 @@ async function startServer() {
       );
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -352,7 +351,7 @@ async function startServer() {
       const result = await db.query("SELECT * FROM mileage_entries WHERE id = $1", [id]);
       return res.status(201).json(result.rows[0]);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -375,7 +374,7 @@ async function startServer() {
       const result = await db.query("SELECT * FROM mileage_entries WHERE id = $1", [id]);
       return res.json(result.rows[0]);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -389,7 +388,7 @@ async function startServer() {
       await db.query("DELETE FROM mileage_entries WHERE id = $1 AND user_id = $2", [id, req.userId]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -406,7 +405,7 @@ async function startServer() {
       }));
       return res.json(formatted);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -427,7 +426,7 @@ async function startServer() {
       }
       return res.status(201).json(entry);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -454,7 +453,7 @@ async function startServer() {
       }
       return res.json(entry);
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -468,7 +467,7 @@ async function startServer() {
       await db.query("DELETE FROM vehicle_expenses WHERE id = $1 AND user_id = $2", [id, req.userId]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -493,7 +492,7 @@ async function startServer() {
         expenses,
       });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -595,7 +594,7 @@ async function startServer() {
 
       return res.json({ success: true });
     } catch (err: unknown) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -609,7 +608,7 @@ async function startServer() {
       let rates = result.rows;
       return res.json(rates);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -632,7 +631,7 @@ async function startServer() {
       );
       return res.json(result.rows);
     } catch (err: any) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -670,7 +669,7 @@ async function startServer() {
         tables,
       });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -686,7 +685,7 @@ async function startServer() {
       `);
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -694,7 +693,8 @@ async function startServer() {
     try {
       const email = normalizeEmail(req.body?.email);
       const password = validatePassword(req.body?.password);
-      const role = req.body?.role === "admin" ? "admin" : "user";
+      const role = req.body?.role ?? "user";
+      if (role !== "user" && role !== "admin") throw new ValidationError("Role must be user or admin.");
       const existingUserResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
       if (existingUserResult.rows.length > 0) {
         return res.status(400).json({ error: "User already exists with this email" });
@@ -717,7 +717,7 @@ async function startServer() {
 
       return res.status(201).json(result.rows[0]);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -725,7 +725,8 @@ async function startServer() {
     const { id } = req.params;
     try {
       const email = normalizeEmail(req.body?.email);
-      const role = req.body?.role === "admin" ? "admin" : "user";
+      const role = req.body?.role ?? "user";
+      if (role !== "user" && role !== "admin") throw new ValidationError("Role must be user or admin.");
       const password = req.body?.password;
       const existing = await db.query("SELECT * FROM users WHERE id = $1", [id]);
       if (existing.rows.length === 0) {
@@ -765,7 +766,7 @@ async function startServer() {
 
       return res.json(result.rows[0]);
     } catch (err: any) {
-      return validationError(res, err);
+      return apiError(res, err);
     }
   });
 
@@ -782,7 +783,7 @@ async function startServer() {
       await db.query("DELETE FROM users WHERE id = $1", [id]);
       return res.json({ success: true, message: "User and all associated data deleted successfully" });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -796,7 +797,7 @@ async function startServer() {
       `);
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -810,7 +811,7 @@ async function startServer() {
       `);
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -824,7 +825,7 @@ async function startServer() {
       `);
       return res.json(result.rows);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -833,7 +834,7 @@ async function startServer() {
       await db.query("DELETE FROM income_entries WHERE id = $1", [req.params.id]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -842,7 +843,7 @@ async function startServer() {
       await db.query("DELETE FROM mileage_entries WHERE id = $1", [req.params.id]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -851,7 +852,7 @@ async function startServer() {
       await db.query("DELETE FROM vehicle_expenses WHERE id = $1", [req.params.id]);
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return apiError(res, err);
     }
   });
 
@@ -1011,9 +1012,13 @@ Provide a structured analysis in JSON format with:
       return res.json(parsedData);
     } catch (err: any) {
       console.error("Gemini Earnings Analysis Error:", err);
-      return res.status(500).json({ error: "Failed to generate AI earnings analysis: " + err.message });
+      return apiError(res, err);
     }
   });
+
+  app.use("/api", (_req, res) => { res.status(404).json({ error: "API endpoint not found." }); });
+
+  app.use("/api", requestErrorHandler);
 
   // Vite integration
   if (process.env.NODE_ENV !== "production") {
@@ -1029,6 +1034,8 @@ Provide a structured analysis in JSON format with:
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  app.use(requestErrorHandler);
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

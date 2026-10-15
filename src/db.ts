@@ -4,9 +4,12 @@ import Database from "better-sqlite3";
 import path from "path";
 
 const { Pool } = pg;
+// pg supports a per-query client timeout, which its QueryConfig types omit.
+const healthQuery: pg.QueryConfig & { query_timeout: number } = { text: "SELECT 1", query_timeout: 3000 };
 
 export interface DBClient {
   isPostgres: boolean;
+  checkHealth(): Promise<void>;
   query<T = any>(sql: string, params?: any[]): Promise<{ rows: T[] }>;
   exec(sql: string): Promise<void>;
   transaction<T>(fn: (tx: DBClient) => Promise<T>): Promise<T>;
@@ -41,6 +44,10 @@ if (databaseUrl || postgresHost || process.env.NODE_ENV === "production" || proc
     max: 20,
   });
 }
+
+// An idle connection may fail during a database restart. Keep the process alive
+// so readiness can report the outage and the pool can reconnect afterward.
+pool?.on("error", error => console.error("PostgreSQL idle connection error:", error));
 
 // Translate PostgreSQL parameterized queries ($1, $2, ...) to SQLite (?) if fallback is needed
 function convertPgParamsToSqlite(sql: string): string {
@@ -134,6 +141,7 @@ export async function initDatabase(): Promise<DBClient> {
 
       return {
         isPostgres: true,
+        async checkHealth() { await pool!.query(healthQuery); },
         async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
           const res = await pool!.query(sql, params);
           return { rows: decodeMoneyRows(res.rows) };
@@ -145,6 +153,7 @@ export async function initDatabase(): Promise<DBClient> {
           const client = await pool!.connect();
           const tx: DBClient = {
             isPostgres: true,
+            async checkHealth() { await client.query(healthQuery); },
             async query<U = any>(sql: string, params: any[] = []) {
               const res = await client.query(sql, params);
               return { rows: decodeMoneyRows(res.rows) as U[] };
@@ -253,6 +262,7 @@ export async function initDatabase(): Promise<DBClient> {
 
   return {
     isPostgres: false,
+    async checkHealth() { sqliteDb!.prepare("SELECT 1").get(); },
     async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
       const sqliteSql = convertPgParamsToSqlite(sql);
       const isSelect = /^\s*SELECT/i.test(sqliteSql);
