@@ -51,6 +51,7 @@ export default function TaxDeductionCalculatorModal({
   const [taxRate, setTaxRate] = useState<number>(22); // 22% default estimated tax rate
   const [businessUsePct, setBusinessUsePct] = useState<number>(85); // 85% business use default
   const [vehicleExpenseInput, setVehicleExpenseInput] = useState<number>(0);
+  const [useLoggedExpenses, setUseLoggedExpenses] = useState(true);
   const [mileageDeductionInput, setMileageDeductionInput] = useState<number>(0);
   const [otherDeductionsInput, setOtherDeductionsInput] = useState<number>(0); // Cell phone / supplies estimate
   const [deductionMethod, setDeductionMethod] = useState<"standard_mileage" | "actual_expense">("actual_expense");
@@ -61,6 +62,7 @@ export default function TaxDeductionCalculatorModal({
     if (isOpen) {
       setGrossIncome(loggedIncome);
       setVehicleExpenseInput(loggedExpenseTotal);
+      setUseLoggedExpenses(true);
       setMileageDeductionInput(loggedMileageDeduction);
     }
   }, [isOpen, loggedIncome, loggedExpenseTotal, loggedMileageDeduction]);
@@ -81,9 +83,11 @@ export default function TaxDeductionCalculatorModal({
     if (deductionMethod === "standard_mileage") {
       return mileageDeductionInput;
     } else {
-      return percentMoney(vehicleExpenseInput, businessUsePct);
+      return useLoggedExpenses
+        ? sumMoney(vehicleExpenses, expense => percentMoney(expense.amount, businessUsePct))
+        : percentMoney(vehicleExpenseInput, businessUsePct);
     }
-  }, [deductionMethod, mileageDeductionInput, vehicleExpenseInput, businessUsePct]);
+  }, [deductionMethod, mileageDeductionInput, vehicleExpenseInput, businessUsePct, useLoggedExpenses, vehicleExpenses]);
 
   const totalDeductions = useMemo(() => {
     return Math.max(0, addMoney(eligibleVehicleDeduction, otherDeductionsInput));
@@ -113,6 +117,7 @@ export default function TaxDeductionCalculatorModal({
   const handleResetToLogs = () => {
     setGrossIncome(loggedIncome);
     setVehicleExpenseInput(loggedExpenseTotal);
+    setUseLoggedExpenses(true);
     setMileageDeductionInput(loggedMileageDeduction);
     setBusinessUsePct(85);
     setOtherDeductionsInput(0);
@@ -122,6 +127,7 @@ export default function TaxDeductionCalculatorModal({
     const summaryText = `--- GIG DRIVER TAX DEDUCTION ESTIMATE ---
 Rate coverage: ${missingRateYears(mileageEntries, craRates).length ? `INCOMPLETE; excluded years: ${missingRateYears(mileageEntries, craRates).join(", ")}` : "Matching-year rates configured; verify rates before filing"}
 Planning only: confirm eligible deductions, business use and GST/HST. CPP, tax credits and progressive brackets are excluded.
+Actual-cost rounding: ${useLoggedExpenses ? "per logged receipt" : "one manually entered total"}.
 Gross Earnings: ${formatCurrency(grossIncome)}
 Planning Method: ${deductionMethod === "standard_mileage" ? "Per-Kilometre Planning Estimate" : `Actual Vehicle Expenses (${businessUsePct}% Business Use)`}
 Vehicle/Mileage Deduction: ${formatCurrency(eligibleVehicleDeduction)}
@@ -306,7 +312,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                       <Car className="w-3.5 h-3.5 text-blue-500" /> Standard Rate
                     </span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                      CRA/IRS Mileage per km
+                      Configured annual kilometre estimate
                     </span>
                   </button>
 
@@ -370,7 +376,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                       <input
                         type="number"
                         value={vehicleExpenseInput || ""}
-                        onChange={(e) => setVehicleExpenseInput(Number(e.target.value))}
+                        onChange={(e) => { setVehicleExpenseInput(Number(e.target.value)); setUseLoggedExpenses(false); }}
                         className="w-full pl-7 pr-3 py-2 text-sm font-mono font-bold bg-white dark:bg-slate-900 dark:text-white border border-slate-250 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="Total vehicle expenses..."
                       />
@@ -381,7 +387,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                       <span>Business Use Percentage ({businessUsePct}%)</span>
                       <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                        Business-use estimate: {formatCurrency(percentMoney(vehicleExpenseInput, businessUsePct))}
+                        Business-use estimate: {formatCurrency(eligibleVehicleDeduction)}
                       </span>
                     </label>
                     <input
@@ -466,7 +472,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
 
           <p className="text-[11px] text-slate-400 dark:text-slate-500 italic flex items-start gap-1.5 text-left">
             <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
-            Note: This tax calculation is an estimate for informational planning purposes. Always consult a licensed CPA or tax professional for official tax filing guidance.
+            Planning only. Logged actual costs round per receipt; a manually entered total rounds once. Recorded costs include GST/HST without an automatic credit. Confirm eligibility with a qualified Canadian tax professional.
           </p>
         </div>
 

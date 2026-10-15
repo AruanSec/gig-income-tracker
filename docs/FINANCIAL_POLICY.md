@@ -46,7 +46,9 @@ Tracked tax is informational: the app neither automatically claims an input tax
 credit nor removes one from expenses. A filing calculation must avoid claiming
 recoverable GST/HST again as an income-tax expense. Registration and credit rules
 vary; commercial ridesharing and delivery need separate review. Recorded platform
-adjustments are not assumed to be income-tax instalments.
+adjustments are not assumed to be income-tax instalments. Recorded revenue uses
+net fare plus tips; the app does not reconstruct platform fees or certify gross
+revenue for a tax return. Reconcile platform statements before filing.
 
 Tax estimates apply one user-selected rate to positive planning profit. They
 exclude CPP, progressive brackets, personal credits, instalments and GST/HST

@@ -77,7 +77,7 @@ export function parseMileage(value: unknown) {
   const startOdometer = number(input.startOdometer, "Start odometer");
   const endOdometer = number(input.endOdometer, "End odometer");
   if (endOdometer <= startOdometer) throw new ValidationError("End odometer must be greater than start odometer.");
-  return { date: date(input.date, "Date"), purpose: text(input.purpose, "Purpose", 500), startOdometer, endOdometer, distance: Math.round((endOdometer - startOdometer) * 100) / 100, tripType: text(input.tripType, "Trip type", 100), notes: optionalText(input.notes) };
+  return { date: date(input.date, "Date"), purpose: text(input.purpose, "Purpose", 500), startOdometer, endOdometer, distance: new FinancialDecimal(endOdometer).minus(startOdometer).toDecimalPlaces(2).toNumber(), tripType: text(input.tripType, "Trip type", 100), notes: optionalText(input.notes) };
 }
 
 export function parseExpense(value: unknown) {

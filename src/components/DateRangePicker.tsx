@@ -1,3 +1,4 @@
+import { dateRangeForPreset, DateRangePreset } from "../utils";
 import React from "react";
 import { motion } from "motion/react";
 import { Calendar, X, CalendarDays, Sparkles } from "lucide-react";
@@ -16,90 +17,13 @@ export default function DateRangePicker({
   label = "Filter by Date Range"
 }: DateRangePickerProps) {
   
-  // Quick helper to get ISO date string (YYYY-MM-DD)
-  const toISODate = (date: Date) => {
-    return date.toISOString().split("T")[0];
-  };
-
-  const handlePreset = (preset: "this-week" | "last-week" | "this-month" | "last-month" | "this-year" | "all") => {
-    const today = new Date();
-    
-    switch (preset) {
-      case "this-week": {
-        // Start of week: Monday
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(today.setDate(diff));
-        onChange(toISODate(monday), toISODate(new Date()));
-        break;
-      }
-      case "last-week": {
-        // Last week's Monday to Sunday
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
-        const lastMonday = new Date(today.setDate(diff));
-        const lastSunday = new Date(lastMonday);
-        lastSunday.setDate(lastMonday.getDate() + 6);
-        onChange(toISODate(lastMonday), toISODate(lastSunday));
-        break;
-      }
-      case "this-month": {
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        onChange(toISODate(firstDay), toISODate(new Date()));
-        break;
-      }
-      case "last-month": {
-        const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        onChange(toISODate(firstDayLastMonth), toISODate(lastDayLastMonth));
-        break;
-      }
-      case "this-year": {
-        const firstDayYear = new Date(today.getFullYear(), 0, 1);
-        onChange(toISODate(firstDayYear), toISODate(new Date()));
-        break;
-      }
-      case "all":
-      default:
-        onChange("", "");
-        break;
-    }
-  };
-
-  // Determine which preset is currently active (if any)
+  const handlePreset = (preset: DateRangePreset) => onChange(...dateRangeForPreset(preset));
   const getActivePreset = (): string => {
     if (!startDate && !endDate) return "all";
-    
-    const today = new Date();
-    const todayStr = toISODate(today);
-
-    // This Week Check
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(today.setDate(diff));
-    if (startDate === toISODate(monday) && endDate === todayStr) return "this-week";
-
-    // Last Week Check
-    today.setDate(new Date().getDate()); // reset
-    const lastDiff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
-    const lastMonday = new Date(today.setDate(lastDiff));
-    const lastSunday = new Date(lastMonday);
-    lastSunday.setDate(lastMonday.getDate() + 6);
-    if (startDate === toISODate(lastMonday) && endDate === toISODate(lastSunday)) return "last-week";
-
-    // This Month Check
-    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    if (startDate === toISODate(firstDay) && endDate === todayStr) return "this-month";
-
-    // Last Month Check
-    const firstDayLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
-    const lastDayLastMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 0);
-    if (startDate === toISODate(firstDayLastMonth) && endDate === toISODate(lastDayLastMonth)) return "last-month";
-
-    // This Year Check
-    const firstDayYear = new Date(new Date().getFullYear(), 0, 1);
-    if (startDate === toISODate(firstDayYear) && endDate === todayStr) return "this-year";
-
+    for (const preset of ["this-week", "last-week", "this-month", "last-month", "this-year"] as const) {
+      const [start, end] = dateRangeForPreset(preset);
+      if (startDate === start && endDate === end) return preset;
+    }
     return "custom";
   };
 

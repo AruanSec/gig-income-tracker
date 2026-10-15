@@ -12,7 +12,6 @@ interface MileageStatsGridProps {
 
 export default function MileageStatsGrid({ stats, entries, expenses }: MileageStatsGridProps) {
   const totalExpenses = sumMoney(expenses, item => item.amount);
-  const combinedDeduction = stats.totalDeduction;
 
   return (
     <div className="space-y-6" id="mileage-stats-container">
@@ -43,7 +42,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
           </div>
         </div>
 
-        {/* Total CRA Mileage Deduction Value */}
+        {/* Total Kilometre Estimate Value */}
         <div 
           className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-850 transition-all duration-300"
           id="stat-card-total-deduction"
@@ -96,15 +95,15 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
         >
           <div className="space-y-2 relative z-10">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Mileage Comparison
+              Expense Records
             </span>
             <div className="flex items-baseline gap-0.5">
               <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight" id="combined-deduction-value">
-                {formatCurrency(combinedDeduction)}
+                {expenses.length}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 leading-normal">
-              Before eligibility and GST/HST review
+              Receipts recorded for expense review
             </p>
           </div>
           <div className="p-2.5 bg-emerald-950/80 text-emerald-400 rounded-xl border border-emerald-800/50 relative z-10">

@@ -25,7 +25,6 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
       distance: number;
       mileageDeduction: number;
       expenseTotal: number;
-      combinedTotal: number;
     }> = {};
 
     // Group Mileage
@@ -44,7 +43,6 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
           distance: 0,
           mileageDeduction: 0,
           expenseTotal: 0,
-          combinedTotal: 0,
         };
       }
       data[periodKey].distance += trip.distance;
@@ -66,15 +64,9 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
           distance: 0,
           mileageDeduction: 0,
           expenseTotal: 0,
-          combinedTotal: 0,
         };
       }
       data[periodKey].expenseTotal = addMoney(data[periodKey].expenseTotal, exp.amount);
-    });
-
-    // Calculate Combined Totals
-    Object.keys(data).forEach((key) => {
-      data[key].combinedTotal = data[key].mileageDeduction;
     });
 
     // Sort periods descending (newest first)
@@ -94,13 +86,11 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
     });
 
     const expenseTotal = sumMoney(expenses, item => item.amount);
-    const combinedTotal = mileageDeduction;
 
     return {
       distance,
       mileageDeduction,
       expenseTotal,
-      combinedTotal,
     };
   }, [mileageEntries, expenses, mileageDeductionsMap]);
 
@@ -128,7 +118,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
           </div>
           <div className="text-left md:text-right shrink-0">
             <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-400 tracking-tight block">
-              {formatCurrency(totals.combinedTotal)}
+              {formatCurrency(totals.mileageDeduction)}
             </span>
             <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mt-1">
               Before eligibility review
@@ -137,7 +127,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
         </div>
 
         {/* Breakdown bar graph */}
-        {totals.combinedTotal > 0 && (
+        {totals.mileageDeduction > 0 && (
           <div className="relative mt-6 pt-5 border-t border-slate-800 space-y-2">
             <div className="flex justify-between items-center text-xs">
               <span className="font-bold flex items-center gap-1.5 text-blue-300">
@@ -154,7 +144,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
               <div 
                 className="bg-blue-500 h-full transition-all duration-500" 
                 style={{ width: `${mileagePercent}%` }} 
-                title={`Mileage Deductions: ${mileagePercent.toFixed(1)}%`}
+                title={`Mileage Estimate: ${mileagePercent.toFixed(1)}%`}
               />
               <div 
                 className="bg-purple-500 h-full transition-all duration-500" 
@@ -251,7 +241,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
             </div>
             <h5 className="text-sm font-bold text-slate-700 dark:text-slate-200">No periodical logs recorded</h5>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-normal">
-              Log your business trips or car maintenance expenses to view month-by-month consolidated operational write-offs.
+              Log your business trips or car maintenance expenses to view month-by-month vehicle planning comparisons.
             </p>
           </div>
         ) : (
@@ -261,9 +251,8 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
                 <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider bg-slate-50/10 dark:bg-slate-900/20">
                   <th className="px-6 py-3">Month</th>
                   <th className="px-6 py-3 text-right">Business distance</th>
-                  <th className="px-6 py-3 text-right">Mileage Deduction (A)</th>
-                  <th className="px-6 py-3 text-right">Operating Expenses (B)</th>
                   <th className="px-6 py-3 text-right">Kilometre Estimate</th>
+                  <th className="px-6 py-3 text-right">Recorded Costs</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -273,7 +262,6 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
                     <td className="px-6 py-4 text-right font-mono text-slate-600 dark:text-slate-400">{data.distance.toLocaleString()} km</td>
                     <td className="px-6 py-4 text-right font-mono text-blue-600 dark:text-blue-400 font-semibold">{formatCurrency(data.mileageDeduction)}</td>
                     <td className="px-6 py-4 text-right font-mono text-purple-600 dark:text-purple-400 font-semibold">{formatCurrency(data.expenseTotal)}</td>
-                    <td className="px-6 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">{formatCurrency(data.combinedTotal)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -292,10 +280,10 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
           <div className="space-y-2">
             <h5 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-              The Standard Rate Method
+              Kilometre Planning Comparison
             </h5>
             <p>
-              Under CRA Form **T2125 (Statement of Business or Professional Activities)**, gig workers can claim motor vehicle expenses. Keeping a detailed mileage log is **mandatory**. By logging your business odometer records in this tracker, your cumulative mileage automatically applies the tiered rates.
+              Keep a mileage log and receipts to support business use. This comparison applies configured annual rates for planning; it does not determine an allowable self-employed deduction under Form T2125.
             </p>
           </div>
           <div className="space-y-2">
@@ -304,7 +292,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
               The Actual Expenses Method
             </h5>
             <p>
-              If claiming actual expenses instead of a simplified mileage allowance, you must multiply your total annual maintenance expenses (e.g. repairs, oil, insurance, fuel) by your **Business-Use Percentage** (Business km divided by Total km driven in the year). Having both tracked in one place allows you to seamlessly make this calculation at tax time!
+              Actual costs require business-use allocation and review of eligible categories, limits and recoverable GST/HST. Some costs have separate rules; the tracker does not calculate capital cost allowance or certify filing amounts.
             </p>
           </div>
         </div>

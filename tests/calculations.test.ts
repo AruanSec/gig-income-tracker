@@ -79,3 +79,32 @@ test("filtered mileage retains earlier annual usage and trip rounding reconciles
   assert.equal(calculateMileageStats(entries, rates).totalDeduction, sumMoney(Object.values(calculated), e => e.deduction));
   assert.deepEqual(calculateTripDeductions([...entries].reverse(), rates), calculated);
 });
+
+import { dateRangeForPreset } from "../src/utils";
+for (const zone of ["UTC", "America/Toronto", "America/Vancouver"]) {
+  test(`date presets retain local calendar boundaries late at night in ${zone}`, () => {
+    const previous = process.env.TZ;
+    process.env.TZ = zone;
+    try {
+      const now = new Date(2026, 0, 1, 23, 30);
+      assert.deepEqual(dateRangeForPreset("this-week", now), ["2025-12-29", "2026-01-01"]);
+      assert.deepEqual(dateRangeForPreset("last-week", now), ["2025-12-22", "2025-12-28"]);
+      assert.deepEqual(dateRangeForPreset("this-month", now), ["2026-01-01", "2026-01-01"]);
+      assert.deepEqual(dateRangeForPreset("last-month", now), ["2025-12-01", "2025-12-31"]);
+      assert.deepEqual(dateRangeForPreset("this-year", now), ["2026-01-01", "2026-01-01"]);
+      assert.deepEqual(dateRangeForPreset("last-month", new Date(2024, 2, 31, 23, 30)), ["2024-02-01", "2024-02-29"]);
+      assert.deepEqual(dateRangeForPreset("all", now), ["", ""]);
+    } finally {
+      if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
+    }
+  });
+}
+
+test("same-day mileage allocation is stable when API ordering changes", () => {
+  const entries: MileageEntry[] = ["b", "a"].map(id => ({ id, date: "2026-01-01", distance: .75, startOdometer: 0, endOdometer: .75, purpose: "Test", tripType: "Delivery" }));
+  const rates = [{ year: "2026", tier1_threshold: 1, tier1_rate: .8, tier2_rate: .7 }];
+  const result = calculateTripDeductions(entries, rates);
+  assert.equal(result.a.deduction, .6);
+  assert.equal(result.b.deduction, .55);
+  assert.deepEqual(result, calculateTripDeductions([...entries].reverse(), rates));
+});

@@ -55,6 +55,10 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
     await t.test("real accounts start with empty financial ledgers", async () => {
       for (const resource of ["income", "mileage", "expenses"]) assert.deepEqual((await api("GET", `/api/${resource}`, undefined, token)).body, []);
     });
+    await t.test("rate settings start empty and do not regenerate unverified presets", async () => {
+      assert.deepEqual((await api("GET", "/api/settings/cra-rates", undefined, token)).body, []);
+      assert.deepEqual((await api("GET", "/api/settings/cra-rates", undefined, token)).body, []);
+    });
     await t.test("invalid sessions and ordinary admin access are rejected", async () => {
       assert.equal((await api("GET", "/api/income")).status, 401);
       assert.equal((await api("GET", "/api/admin/users", undefined, token)).status, 403);

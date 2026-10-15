@@ -59,7 +59,7 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
         schemaVersion: 1,
         income: [{ ...baseIncome, startDate: "2025-12-31", endDate: "2026-01-02", netFare: 100.03 },
           { ...baseIncome, startDate: "2026-04-01", endDate: "2026-04-01", netFare: .1, tips: .2 }],
-        mileage: [trip("2026-03-31", 4999.99), trip("2026-04-01", .02), trip("2026-04-02", .01), trip("2027-01-01", 100)],
+        mileage: [trip("2026-03-31", 4999.99), trip("2026-04-01", .02), trip("2026-04-02", .01), trip("2026-04-03", 100), trip("2027-01-01", 100)],
         expenses: [1, 2].map(i => ({ date: `2026-04-0${i}`, category: "Fuel", amount: .1, description: "Receipt", gstHstEligible: true, gstHstAmount: .01 })),
         craRates: [{ year: "2026", tier1_threshold: 5000, tier1_rate: .8, tier2_rate: .7 }],
       } });
@@ -85,14 +85,23 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
       expect(content).toContain('"Estimated Profit / Loss","0.12"');
       await page.locator("#planning-method").selectOption("standard");
       content = await csv();
-      expect(content).toContain('"Planning Expense Estimate","0.03"');
+      expect(content).toContain('"Planning Expense Estimate","70.03"');
       expect(content).toContain('"Rate coverage","INCOMPLETE"');
       await report.getByRole("button", { name: "Month", exact: true }).click();
       await report.locator("select").nth(1).selectOption("4");
-      expect(await csv()).toContain('"Planning Expense Estimate","0.03"');
+      expect(await csv()).toContain('"Planning Expense Estimate","70.03"');
       await report.getByRole("button", { name: "Annual", exact: true }).click();
       await year.selectOption("2025");
       expect(await csv()).toContain('"Gross Income (Net Fare + Tips)","100.03"');
+      await page.locator("#open-tax-calc-header-btn").click();
+      const calculator = page.locator("#tax-calculator-modal-content");
+      await expect(calculator).toContainText(/Business-use estimate: CAD\s+0\.18/);
+      await page.locator("#done-tax-calculator-btn").click();
+      await page.locator("#tab-mileage-trigger").click();
+      await page.locator("#date-picker-start").fill("2026-04-03");
+      await page.locator("#date-picker-end").fill("2026-04-03");
+      await expect(page.locator("#mileage-tab-view")).toContainText(/CAD\s+70\.00/);
+
     });
   });
 }

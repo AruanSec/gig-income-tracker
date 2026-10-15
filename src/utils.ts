@@ -137,3 +137,22 @@ export function calculateTripDeductions(entries: MileageEntry[], customRates?: C
   }
   return results;
 }
+
+export type DateRangePreset = "this-week" | "last-week" | "this-month" | "last-month" | "this-year" | "all";
+
+/** Preset boundaries are local calendar dates, including late-evening Canadian use. */
+export function dateRangeForPreset(preset: DateRangePreset, now = new Date()): [string, string] {
+  const end = new Date(now);
+  const start = new Date(now);
+  if (preset === "all") return ["", ""];
+  if (preset === "this-week" || preset === "last-week") {
+    const daysFromMonday = (now.getDay() + 6) % 7;
+    start.setDate(now.getDate() - daysFromMonday - (preset === "last-week" ? 7 : 0));
+    if (preset === "last-week") { end.setTime(start.getTime()); end.setDate(start.getDate() + 6); }
+  } else if (preset === "this-month") start.setDate(1);
+  else if (preset === "last-month") {
+    start.setDate(1); start.setMonth(start.getMonth() - 1);
+    end.setDate(0);
+  } else if (preset === "this-year") start.setMonth(0, 1);
+  return [localDateString(start), localDateString(end)];
+}

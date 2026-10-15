@@ -40,9 +40,9 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Live calculation of earnings
-  const numNetFare = parseFloat(netFare) || 0;
-  const numTips = parseFloat(tips) || 0;
-  const numTaxes = parseFloat(taxes) || 0;
+  const numNetFare = Number.isFinite(parseFloat(netFare)) ? parseFloat(netFare) : 0;
+  const numTips = Number.isFinite(parseFloat(tips)) ? parseFloat(tips) : 0;
+  const numTaxes = Number.isFinite(parseFloat(taxes)) ? parseFloat(taxes) : 0;
   const computedTotalEarnings = subtractMoney(addMoney(numNetFare, numTips), numTaxes);
 
   // Initialize fields if editing
