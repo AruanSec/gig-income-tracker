@@ -4,6 +4,8 @@ import Database from "better-sqlite3";
 import path from "path";
 
 const { Pool } = pg;
+// pg supports a per-query client timeout, which its QueryConfig types omit.
+const healthQuery: pg.QueryConfig & { query_timeout: number } = { text: "SELECT 1", query_timeout: 3000 };
 
 export interface DBClient {
   isPostgres: boolean;
@@ -139,7 +141,7 @@ export async function initDatabase(): Promise<DBClient> {
 
       return {
         isPostgres: true,
-        async checkHealth() { await pool!.query({ text: "SELECT 1", query_timeout: 3000 }); },
+        async checkHealth() { await pool!.query(healthQuery); },
         async query<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
           const res = await pool!.query(sql, params);
           return { rows: decodeMoneyRows(res.rows) };
@@ -151,7 +153,7 @@ export async function initDatabase(): Promise<DBClient> {
           const client = await pool!.connect();
           const tx: DBClient = {
             isPostgres: true,
-            async checkHealth() { await client.query({ text: "SELECT 1", query_timeout: 3000 }); },
+            async checkHealth() { await client.query(healthQuery); },
             async query<U = any>(sql: string, params: any[] = []) {
               const res = await client.query(sql, params);
               return { rows: decodeMoneyRows(res.rows) as U[] };
