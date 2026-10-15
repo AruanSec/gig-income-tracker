@@ -55,6 +55,10 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
     await t.test("real accounts start with empty financial ledgers", async () => {
       for (const resource of ["income", "mileage", "expenses"]) assert.deepEqual((await api("GET", `/api/${resource}`, undefined, token)).body, []);
     });
+    await t.test("rate settings start empty and do not regenerate unverified presets", async () => {
+      assert.deepEqual((await api("GET", "/api/settings/cra-rates", undefined, token)).body, []);
+      assert.deepEqual((await api("GET", "/api/settings/cra-rates", undefined, token)).body, []);
+    });
     await t.test("invalid sessions and ordinary admin access are rejected", async () => {
       assert.equal((await api("GET", "/api/income")).status, 401);
       assert.equal((await api("GET", "/api/admin/users", undefined, token)).status, 403);
@@ -64,6 +68,15 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
       assert.equal((await api("POST", "/api/income", { ...income, startDate: "2026-02-30", endDate: "2026-03-02" }, token)).status, 400);
       assert.equal((await api("POST", "/api/income", { ...income, startDate: "2024-02-29", endDate: "2024-02-29" }, token)).status, 201);
       for (const bad of [{ ...rate, tier1_rate: -0.1 }, { ...rate, year: "oops" }, { ...rate, tier1_threshold: null }]) assert.equal((await api("POST", "/api/settings/cra-rates", bad, token)).status, 400);
+    });
+    await t.test("money rejects sub-cent input and round trips decimal earnings", async () => {
+      for (const netFare of [1.005, 10_000_000_000]) assert.equal((await api("POST", "/api/income", { ...income, netFare }, token)).status, 400);
+      assert.equal((await api("POST", "/api/expenses", { ...expense, gstHstAmount: .005 }, token)).status, 400);
+      const created = await api("POST", "/api/income", { ...income, netFare: .1, tips: .2, taxes: .2 }, token);
+      assert.equal(created.status, 201); assert.equal(created.body.totalEarnings, .1);
+      const saved = (await api("GET", "/api/income", undefined, token)).body.find((entry: any) => entry.id === created.body.id);
+      assert.equal(saved.netFare, .1); assert.equal(saved.totalEarnings, .1);
+      await api("DELETE", `/api/income/${created.body.id}`, undefined, token);
     });
     await t.test("record writes derive values and reject cross-user writes", async () => {
       const second = await api("POST", "/api/auth/signup", { email: `other-${suffix}@example.test`, password });

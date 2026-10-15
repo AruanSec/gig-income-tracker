@@ -1,3 +1,4 @@
+import { addMoney } from "../money";
 import React, { useState, useMemo } from "react";
 import {
   BarChart,
@@ -74,10 +75,10 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
       const mo = parseInt(parts[1], 10) - 1;
 
       if (yr === selectedYear && mo >= 0 && mo < 12) {
-        months[mo].totalEarnings += entry.totalEarnings;
-        months[mo].netFare += entry.netFare;
-        months[mo].tips += entry.tips;
-        months[mo].taxes += entry.taxes;
+        months[mo].totalEarnings = addMoney(months[mo].totalEarnings, entry.totalEarnings);
+        months[mo].netFare = addMoney(months[mo].netFare, entry.netFare);
+        months[mo].tips = addMoney(months[mo].tips, entry.tips);
+        months[mo].taxes = addMoney(months[mo].taxes, entry.taxes);
         months[mo].trips += entry.trips;
         months[mo].onlineMinutes += entry.onlineMinutes;
         months[mo].shiftsCount += 1;
@@ -96,9 +97,9 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
 
   // Annual Summary Metrics
   const yearSummary = useMemo(() => {
-    const totalYearEarnings = monthlyData.reduce((acc, m) => acc + m.totalEarnings, 0);
-    const totalNetFare = monthlyData.reduce((acc, m) => acc + m.netFare, 0);
-    const totalTips = monthlyData.reduce((acc, m) => acc + m.tips, 0);
+    const totalYearEarnings = monthlyData.reduce((acc, m) => addMoney(acc, m.totalEarnings), 0);
+    const totalNetFare = monthlyData.reduce((acc, m) => addMoney(acc, m.netFare), 0);
+    const totalTips = monthlyData.reduce((acc, m) => addMoney(acc, m.tips), 0);
     const totalTrips = monthlyData.reduce((acc, m) => acc + m.trips, 0);
     const totalShifts = monthlyData.reduce((acc, m) => acc + m.shiftsCount, 0);
     

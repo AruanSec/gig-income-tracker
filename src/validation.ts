@@ -1,3 +1,4 @@
+import { FinancialDecimal, MAX_MONEY, addMoney, subtractMoney } from "./money";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -22,6 +23,14 @@ function optionalText(value: unknown, max = 2000): string {
 function number(value: unknown, name: string, min = 0): number {
   const parsed = value;
   if (typeof parsed !== "number" || !Number.isFinite(parsed) || parsed < min || parsed > Number.MAX_SAFE_INTEGER) throw new ValidationError(`${name} must be a finite number of at least ${min}.`);
+  return parsed;
+}
+
+function money(value: unknown, name: string, min = 0): number {
+  const parsed = number(value, name, min);
+  if (parsed > MAX_MONEY || new FinancialDecimal(parsed).decimalPlaces() > 2) {
+    throw new ValidationError(`${name} must have at most two decimal places and be at most ${MAX_MONEY} CAD.`);
+  }
   return parsed;
 }
 
@@ -57,10 +66,10 @@ export function parseIncome(value: unknown) {
   const onlineMinutes = integer(input.onlineMinutes, "Online minutes");
   const activeMinutes = integer(input.activeMinutes, "Active minutes");
   if (activeMinutes > onlineMinutes) throw new ValidationError("Active minutes cannot exceed online minutes.");
-  const netFare = number(input.netFare, "Net fare");
-  const tips = number(input.tips, "Tips");
-  const taxes = number(input.taxes, "Taxes");
-  return { startDate, endDate, trips: integer(input.trips, "Trips"), onlineMinutes, activeMinutes, netFare, tips, taxes, totalEarnings: Math.round((netFare + tips - taxes) * 100) / 100, notes: optionalText(input.notes) };
+  const netFare = money(input.netFare, "Net fare");
+  const tips = money(input.tips, "Tips");
+  const taxes = money(input.taxes, "Taxes");
+  return { startDate, endDate, trips: integer(input.trips, "Trips"), onlineMinutes, activeMinutes, netFare, tips, taxes, totalEarnings: subtractMoney(addMoney(netFare, tips), taxes), notes: optionalText(input.notes) };
 }
 
 export function parseMileage(value: unknown) {
@@ -68,14 +77,14 @@ export function parseMileage(value: unknown) {
   const startOdometer = number(input.startOdometer, "Start odometer");
   const endOdometer = number(input.endOdometer, "End odometer");
   if (endOdometer <= startOdometer) throw new ValidationError("End odometer must be greater than start odometer.");
-  return { date: date(input.date, "Date"), purpose: text(input.purpose, "Purpose", 500), startOdometer, endOdometer, distance: Math.round((endOdometer - startOdometer) * 100) / 100, tripType: text(input.tripType, "Trip type", 100), notes: optionalText(input.notes) };
+  return { date: date(input.date, "Date"), purpose: text(input.purpose, "Purpose", 500), startOdometer, endOdometer, distance: new FinancialDecimal(endOdometer).minus(startOdometer).toDecimalPlaces(2).toNumber(), tripType: text(input.tripType, "Trip type", 100), notes: optionalText(input.notes) };
 }
 
 export function parseExpense(value: unknown) {
   const input = record(value);
-  const amount = number(input.amount, "Amount", 0.01);
+  const amount = money(input.amount, "Amount", 0.01);
   const gstHstEligible = input.gstHstEligible === true;
-  const gstHstAmount = gstHstEligible ? number(input.gstHstAmount ?? 0, "GST/HST amount") : 0;
+  const gstHstAmount = gstHstEligible ? money(input.gstHstAmount ?? 0, "GST/HST amount") : 0;
   if (gstHstAmount > amount) throw new ValidationError("GST/HST amount cannot exceed the expense amount.");
   return { date: date(input.date, "Date"), category: text(input.category, "Category", 100), amount, description: text(input.description, "Description", 1000), gstHstEligible, gstHstAmount };
 }

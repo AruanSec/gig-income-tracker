@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, MapPin, Edit, Trash2, Shield, ArrowRight, Route, Coins, FileText, ChevronLeft, ChevronRight, LayoutGrid, Table, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { MileageEntry, CraRate } from "../types";
-import { formatDate, formatCurrency, calculateTripDeductions, CRA_TIER1_RATE, CRA_TIER2_RATE } from "../utils";
+import { formatDate, formatCurrency, calculateTripDeductions } from "../utils";
 
 interface MileageListProps {
   entries: MileageEntry[];
+  allEntries?: MileageEntry[];
   onEdit: (entry: MileageEntry) => void;
   onDelete: (id: string) => void;
   craRates?: CraRate[];
@@ -13,7 +14,7 @@ interface MileageListProps {
 type MileageSortField = "date" | "distance" | "deduction" | "purpose" | "tripType";
 type SortOrder = "asc" | "desc";
 
-export default function MileageList({ entries, onEdit, onDelete, craRates }: MileageListProps) {
+export default function MileageList({ entries, allEntries = entries, onEdit, onDelete, craRates }: MileageListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<MileageSortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -46,8 +47,8 @@ export default function MileageList({ entries, onEdit, onDelete, craRates }: Mil
 
   // Compute precise chronological deductions (need all entries to calculate split thresholds correctly)
   const deductionsMap = useMemo(() => {
-    return calculateTripDeductions(entries, craRates);
-  }, [entries, craRates]);
+    return calculateTripDeductions(allEntries, craRates);
+  }, [allEntries, craRates]);
 
   // Filter and sort entries
   const filteredEntries = useMemo(() => {
@@ -213,7 +214,7 @@ export default function MileageList({ entries, onEdit, onDelete, craRates }: Mil
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {searchTerm 
                 ? "Try adjusting your search keywords or clear the filter."
-                : "Record your business travel to automatically compute tax deduction values under the Canada Revenue Agency tiered rate schedule."
+                : "Record business travel and configure matching-year rates for kilometre planning estimates."
               }
             </p>
           </div>
@@ -291,7 +292,7 @@ export default function MileageList({ entries, onEdit, onDelete, craRates }: Mil
                       <div>
                         <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block uppercase">CRA Deduction</span>
                         <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                          {formatCurrency(tripCalc.deduction)}
+                          {deductionsMap[entry.id] ? formatCurrency(tripCalc.deduction) : "Rate needed"}
                         </span>
                       </div>
                       {tripCalc.tier2Distance > 0 && (
@@ -401,7 +402,7 @@ export default function MileageList({ entries, onEdit, onDelete, craRates }: Mil
                           {entry.distance.toLocaleString()} km
                         </td>
                         <td className="px-3.5 py-1.5 border-r border-slate-150 dark:border-slate-800 text-right text-emerald-600 dark:text-emerald-450 font-bold bg-emerald-50/10 dark:bg-emerald-950/5 whitespace-nowrap">
-                          <div>{formatCurrency(tripCalc.deduction)}</div>
+                          <div>{deductionsMap[entry.id] ? formatCurrency(tripCalc.deduction) : "Rate needed"}</div>
                           {tripCalc.tier2Distance > 0 && (
                             <div className="text-[8px] text-amber-600 dark:text-amber-450 font-bold">Tier 2 Active</div>
                           )}

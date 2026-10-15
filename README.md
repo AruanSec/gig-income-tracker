@@ -264,3 +264,12 @@ default. To test PostgreSQL, set `TEST_DATABASE_URL` to a dedicated disposable t
 database; the suite creates accounts and records there. Never point it at a live
 database. GitHub Actions runs the standard checks and both regression suites on
 feature branches, staging, and main.
+
+## Financial calculation policy
+
+See [docs/FINANCIAL_POLICY.md](docs/FINANCIAL_POLICY.md) for decimal storage,
+legacy-data migration, rounding, period allocation, missing-year rates and tax
+assumptions. Back up the database before upgrading: startup migrates existing
+financial values to decimal storage and recomputes earnings from rounded inputs.
+New accounts must configure verified rates for each mileage year. Existing saved
+rates are preserved and should be reviewed; another year's rate is never reused.

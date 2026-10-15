@@ -1,3 +1,4 @@
+import { addMoney, sumMoney } from "./money";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.5
@@ -10,7 +11,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { saveRecord } from "./api";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "./types";
 import { INITIAL_INCOME_ENTRIES, INITIAL_MILEAGE_ENTRIES, INITIAL_VEHICLE_EXPENSES } from "./data/mockData";
-import { calculateStats, formatCurrency, calculateMileageStats } from "./utils";
+import { calculateStats, formatCurrency, calculateMileageStats, missingRateYears } from "./utils";
 import IncomeStatsGrid from "./components/IncomeStatsGrid";
 import IncomeChart from "./components/IncomeChart";
 import MonthlyIncomeBarChart from "./components/MonthlyIncomeBarChart";
@@ -627,30 +628,30 @@ export default function App() {
               ) : activeTab === "mileage" ? (
                 <>
                   <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[150px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Combined Write-offs</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mileage Estimate</p>
                     <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatCurrency(mileageStats.totalDeduction + vehicleExpenses.reduce((sum, item) => sum + item.amount, 0))}
+                      {formatCurrency(mileageStats.totalDeduction)}
                     </p>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[130px]">
                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Operating Costs</p>
                     <p className="text-lg font-bold text-slate-800 dark:text-slate-200 font-mono">
-                      {formatCurrency(vehicleExpenses.reduce((sum, item) => sum + item.amount, 0))}
+                      {formatCurrency(sumMoney<VehicleExpense>(vehicleExpenses, item => item.amount))}
                     </p>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[150px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recoverable GST/HST</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tracked GST/HST</p>
                     <p className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
-                      {formatCurrency(vehicleExpenses.reduce((sum, item) => sum + (item.gstHstAmount || 0), 0))}
+                      {formatCurrency(sumMoney<VehicleExpense>(vehicleExpenses, item => item.gstHstAmount || 0))}
                     </p>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[130px]">
                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Revenue</p>
                     <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatCurrency(entries.reduce((sum, item) => sum + item.netFare + item.tips, 0))}
+                      {formatCurrency(sumMoney<IncomeEntry>(entries, item => addMoney(item.netFare, item.tips)))}
                     </p>
                   </div>
                 </>
@@ -787,6 +788,12 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" id="app-main">
+        {missingRateYears(mileageEntries, craRates).length > 0 && (
+          <div role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-950">
+            Incomplete mileage estimate: configure verified planning rates for {missingRateYears(mileageEntries, craRates).join(", ")} in CRA Rates. Trips from these years are excluded from estimates; rates are never borrowed from another year.
+          </div>
+        )}
+        <p className="text-xs text-slate-500">Planning only. Review saved annual rates, business-use percentage, and GST/HST eligibility before filing. Recorded GST/HST is not automatically recoverable.</p>
         
         {/* Banner Informational Accent */}
         <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/45 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1018,6 +1025,7 @@ export default function App() {
                     />
                     <MileageList
                       entries={filteredMileageEntries}
+                      allEntries={mileageEntries}
                       onEdit={handleEditMileageEntry}
                       onDelete={handleDeleteMileageEntry}
                       craRates={craRates}
