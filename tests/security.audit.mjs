@@ -1,3 +1,4 @@
+import { provisionAdmin, adminEmail, adminPassword } from './provision.mjs';
 // Diagnostic assessment: PASS = checked control; GAP = observed weakness, not a test failure.
 // Run after npm run build. Creates its own disposable PostgreSQL container and local app.
 import assert from 'node:assert/strict';
@@ -48,14 +49,22 @@ try {
   const port = socket.address().port;
   await new Promise(resolve => socket.close(resolve));
   const base = `http://127.0.0.1:${port}`;
+  provisionAdmin({ ...process.env, NODE_ENV: 'production', DATABASE_URL: databaseUrl });
+  let adminToken;
   app = spawn(process.execPath, ['dist/server.cjs'], { cwd: root,
     env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: databaseUrl, PORT: String(port), TRUST_PROXY: '', GEMINI_API_KEY: '' },
     stdio: ['ignore', 'pipe', 'pipe'] });
   app.stdout.on('data', data => { logs += data; });
   app.stderr.on('data', data => { logs += data; });
   async function request(method, endpoint, data, token, extra = {}) {
+    if (endpoint === '/__fixture/create-account') {
+      if (!adminToken) adminToken = (await request('POST', '/api/auth/login', { email: adminEmail, password: adminPassword })).body.token;
+      const created = await request('POST', '/api/admin/users', { ...data, role: 'user' }, adminToken);
+      if (created.status !== 201) return created;
+      return { ...(await request('POST', '/api/auth/login', data)), status: 201 };
+    }
     const response = await fetch(base + endpoint, { method, signal: AbortSignal.timeout(15000),
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Mode': 'bearer', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
       body: data === undefined ? undefined : JSON.stringify(data) });
     const text = await response.text();
     let body; try { body = JSON.parse(text); } catch { body = text; }
@@ -63,8 +72,8 @@ try {
   }
   await waitFor(async () => app.exitCode === null && (await request('GET', '/api/health')).status === 200);
   const password = 'Disposable-security-password-2026';
-  const a = await request('POST', '/api/auth/signup', { email: 'a@example.test', password, role: 'admin' });
-  const b = await request('POST', '/api/auth/signup', { email: 'b@example.test', password });
+  const a = await request('POST', '/__fixture/create-account', { email: 'a@example.test', password, role: 'admin' });
+  const b = await request('POST', '/__fixture/create-account', { email: 'b@example.test', password });
   assert.equal(a.status, 201); assert.equal(b.status, 201);
   const token = a.body.token, otherToken = b.body.token;
   const user = (await pool.query('SELECT * FROM users WHERE email=$1', ['a@example.test'])).rows[0];
@@ -88,6 +97,7 @@ try {
   }
   await check('admin-authorization-and-role-mass-assignment', async () => {
     assert.equal((await request('GET', '/api/auth/me', undefined, token)).body.role, 'user');
+    assert.equal((await request('POST', '/api/auth/signup', { email: 'forged-admin@example.test', password, role: 'admin' })).status, 403);
     for (const endpoint of ['/api/admin/users', '/api/admin/stats', '/api/admin/data/income', '/api/admin/data/mileage', '/api/admin/data/expenses']) {
       assert.equal((await request('GET', endpoint, undefined, token)).status, 403);
     }
@@ -126,7 +136,7 @@ try {
     const r = await request('OPTIONS', '/api/restore', undefined, undefined, { Origin: 'https://attacker.example', 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization,content-type' });
     assert.equal(r.headers.get('access-control-allow-origin'), null);
     const form = await fetch(base + '/api/restore', { method: 'POST', headers: { Origin: 'https://attacker.example', 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'income=[]&mileage=[]&expenses=[]' });
-    assert.equal(form.status, 401);
+    assert.equal(form.status, 403);
   });
   await check('password-storage-and-token-entropy', async () => {
     assert.match(user.password_hash, /^scrypt\$[a-f0-9]{128}$/); assert.match(user.salt, /^[a-f0-9]{32}$/);
@@ -135,19 +145,21 @@ try {
   });
   await check('raw-bearer-token-in-database', async () => {
     const r = await pool.query('SELECT id FROM sessions WHERE user_id=$1', [user.id]);
-    assert.equal((await request('GET', '/api/auth/me', undefined, r.rows[0].id)).status, 200);
-    return { gap: r.rows.some(row => row.id === token), detail: 'A database-read compromise exposes a directly reusable session token' };
+    assert.equal((await request('GET', '/api/auth/me', undefined, r.rows[0].id)).status, 401);
+    assert.ok(r.rows.every(row => row.id.startsWith('sha256$') && row.id !== token));
+    return { detail: 'Only SHA-256 session digests persisted; replaying a database value is rejected' };
   });
   await check('security-headers-and-private-response-cache', async () => {
     const r = await request('GET', '/api/backup', undefined, token);
     assert.equal(r.headers.get('x-content-type-options'), 'nosniff'); assert.equal(r.headers.get('x-frame-options'), 'DENY');
     const html = await request('GET', '/');
-    const missing = ['content-security-policy', 'strict-transport-security'].filter(h => !html.headers.get(h));
-    return { gap: missing.length > 0 || !r.headers.get('cache-control')?.includes('no-store'), detail: `Missing app headers: ${missing.join(', ')}; authenticated backup Cache-Control: ${r.headers.get('cache-control')}; HTTPS proxy headers untested` };
+    const missing = ['content-security-policy'].filter(h => !html.headers.get(h));
+    return { gap: missing.length > 0 || !r.headers.get('cache-control')?.includes('no-store'), detail: `CSP present: ${!missing.length}; authenticated backup Cache-Control: ${r.headers.get('cache-control')}; HSTS requires HTTPS and is checked with trusted-proxy fixtures` };
   });
   await check('public-backend-bundle-and-source-map', async () => {
     const js = await request('GET', '/server.cjs'); const map = await request('GET', '/server.cjs.map');
     const exposed = js.status === 200 && typeof js.body === 'string' && js.body.includes('password_hash') && map.status === 200 && map.body.sourcesContent?.some(s => s.includes('startServer'));
+    assert.equal(exposed, false);
     return { gap: exposed, detail: `Unauthenticated backend bundle ${js.status}; source map ${map.status}; embedded backend source exposed: ${Boolean(exposed)}` };
   });
   await check('sensitive-project-files-not-served', async () => {
@@ -159,27 +171,47 @@ try {
   });
   await check('expired-and-revoked-sessions', async () => {
     const expired = crypto.randomBytes(32).toString('hex');
-    await pool.query('INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,$3)', [expired, user.id, '2000-01-01T00:00:00.000Z']);
+    await pool.query('INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,$3)', ['sha256$' + crypto.createHash('sha256').update(expired).digest('hex'), user.id, '2000-01-01T00:00:00.000Z']);
     assert.equal((await request('GET', '/api/auth/me', undefined, expired)).status, 401);
     assert.equal((await request('POST', '/api/auth/logout', {}, otherToken)).status, 200);
     assert.equal((await request('GET', '/api/auth/me', undefined, otherToken)).status, 401);
+  });
+  await check('cookie-login-and-csrf', async () => {
+    const login = await fetch(base + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base },
+      body: JSON.stringify({ email: user.email, password }) });
+    assert.equal(login.status, 200); assert.equal((await login.json()).token, undefined);
+    const setCookie = login.headers.get('set-cookie');
+    assert.ok(setCookie.includes('HttpOnly') && setCookie.includes('Secure') && setCookie.includes('SameSite=Strict'));
+    const cookie = setCookie.split(';')[0];
+    for (const origin of [null, 'https://attacker.example', base]) {
+      const response = await fetch(base + '/api/settings/cra-rates', { method: 'POST',
+        headers: { Cookie: cookie, 'Content-Type': 'application/json', ...(origin ? { Origin: origin } : {}) },
+        body: JSON.stringify({ year: '2026', tier1_threshold: 5000, tier1_rate: .7, tier2_rate: .6 }) });
+      assert.equal(response.status, origin === base ? 200 : 403);
+    }
   });
   await check('password-change-guessing-limit', async () => {
     const statuses = [];
     for (let i = 0; i < 22; i++) statuses.push((await request('POST', '/api/auth/change-password', { oldPassword: 'wrong-old-password', newPassword: password }, token)).status);
     assert.ok(statuses.every(s => s === 400 || s === 429));
+    assert.ok(statuses.includes(429));
     return { gap: !statuses.includes(429), detail: `${statuses.filter(s => s === 400).length}/22 wrong-current-password requests accepted for verification; ${statuses.filter(s => s === 429).length} rate limited` };
   });
   await check('account-enumeration', async () => {
-    const r = await request('POST', '/api/auth/signup', { email: user.email, password });
-    return { gap: r.status === 400 && /already exists/i.test(r.body.error), detail: `Duplicate signup status ${r.status}; existing-account message: ${r.body.error}` };
+    const a = await request('POST', '/api/auth/signup', { email: user.email, password });
+    const b = await request('POST', '/api/auth/signup', { email: 'unknown@example.test', password });
+    assert.equal(a.status, 403); assert.equal(b.status, 403); assert.deepEqual(a.body, b.body);
+    return { detail: 'Public signup is disabled with the same response for existing and unknown addresses' };
   });
   await check('stored-xss-csv-and-browser-token-storage', async () => {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ acceptDownloads: true });
-    await context.addInitScript(value => localStorage.setItem('gig_auth_token', value), token);
+
     const page = await context.newPage();
     await page.goto(base);
+    await page.locator('#email').fill(user.email);
+    await page.locator('#password').fill(password);
+    await page.locator('#auth-submit-btn').click();
     await page.getByText(`"${payload}"`, { exact: true }).first().waitFor({ state: 'visible', timeout: 45000 });
     assert.equal(await page.evaluate(() => window.__securityXss), undefined);
     assert.equal(await page.locator('img[onerror]').count(), 0);
@@ -188,9 +220,17 @@ try {
     const downloading = page.waitForEvent('download'); await page.locator('#export-csv-btn').click();
     const csv = await readFile(await (await downloading).path(), 'utf8');
     assert.ok(csv.includes('  - =1+1')); assert.ok(!csv.split('\r\n').some(line => line.startsWith('"=1+1')));
-    assert.equal(await page.evaluate(() => localStorage.getItem('gig_auth_token')), token);
+    assert.equal(await page.evaluate(() => localStorage.getItem('gig_auth_token')), null);
+    assert.ok(!(await page.evaluate(() => document.cookie)).includes('gig_session'));
+    const cookie = (await context.cookies()).find(c => c.name === 'gig_session');
+    assert.ok(cookie?.httpOnly && cookie.secure && cookie.sameSite === 'Strict');
     await context.close();
-    return { gap: true, detail: 'Stored HTML rendered as text without execution; tested category CSV prefixed by fixed label; bearer token is readable by same-origin JavaScript (risk if XSS occurs)' };
+    return { detail: 'Stored HTML remained text; tested category CSV prefixed; browser session cookie is HttpOnly and no token is in localStorage' };
+  });
+  await check('weak-legacy-password-requires-reset', async () => {
+    const legacy = crypto.pbkdf2Sync(password, other.salt, 1000, 64, 'sha512').toString('hex');
+    await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [legacy, other.id]);
+    assert.equal((await request('POST', '/api/auth/login', { email: other.email, password })).status, 400);
   });
   await check('authentication-rate-limit-and-forwarding-spoof', async () => {
     let last;
@@ -217,7 +257,32 @@ try {
     assert.equal(r.status, 200);
     await delay(100);
     const eventOutput = logs.slice(offset);
-    return { gap: eventOutput.trim().length === 0, detail: `Successful admin password reset emitted ${eventOutput.length} log characters; source review finds no security event audit sink` };
+    assert.ok(eventOutput.includes('admin_user_put'));
+    assert.ok(!eventOutput.includes('Reset-security-password-2026'));
+    assert.ok(!eventOutput.includes(token));
+    return { gap: eventOutput.trim().length === 0, detail: `Successful admin password reset emitted ${eventOutput.length} log characters; structured event excludes the supplied password` };
+  });
+  await check('private-compose-and-required-credentials', async () => {
+    const env = { ...process.env, POSTGRES_PASSWORD: 'disposable-admin-check', APP_DATABASE_PASSWORD: 'disposable-app-check' };
+    const config = JSON.parse(execFileSync('docker', ['compose', 'config', '--format', 'json'], { cwd: root, env, encoding: 'utf8' }));
+    assert.equal((config.services.postgres.ports || []).length, 0);
+    assert.ok(config.services['tax-mileage-app'].ports.every(p => p.host_ip === '127.0.0.1'));
+    const appEnv = config.services['tax-mileage-app'].environment;
+    assert.equal(new URL(appEnv.DATABASE_URL).username, 'gig_app');
+    assert.notEqual(appEnv.POSTGRES_PASSWORD, env.POSTGRES_PASSWORD);
+    delete env.POSTGRES_PASSWORD; delete env.APP_DATABASE_PASSWORD;
+    assert.throws(() => execFileSync('docker', ['compose', 'config', '--quiet'], { cwd: root, env, stdio: 'ignore' }));
+  });
+  await check('hsts-behind-explicit-trusted-proxy', async () => {
+    const stopped = once(app, 'exit'); app.kill('SIGTERM'); await stopped;
+    app = spawn(process.execPath, ['dist/server.cjs'], { cwd: root,
+      env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: databaseUrl, PORT: String(port), TRUST_PROXY: '127.0.0.1/32', GEMINI_API_KEY: '' },
+      stdio: ['ignore', 'pipe', 'pipe'] });
+    app.stdout.on('data', data => { logs += data; }); app.stderr.on('data', data => { logs += data; });
+    await waitFor(async () => (await request('GET', '/api/live')).status === 200);
+    const r = await request('GET', '/api/live', undefined, undefined, { 'X-Forwarded-Proto': 'https' });
+    assert.equal(r.headers.get('strict-transport-security'), 'max-age=31536000');
+    assert.equal((await request('GET', '/api/auth/me', undefined, token)).status, 200);
   });
 } catch (error) {
   results.push({ id: 'assessment-runner', status: 'ERROR', detail: error.message });
@@ -239,4 +304,4 @@ const destination = process.env.SECURITY_AUDIT_OUTPUT || path.join(tmpdir(), 'gi
 await writeFile(destination, JSON.stringify(output, null, 2) + '\n');
 console.log(`Results: ${destination}`);
 console.log(JSON.stringify(results.reduce((counts, r) => ({ ...counts, [r.status]: (counts[r.status] || 0) + 1 }), {})));
-if (results.some(r => r.status === 'ERROR')) process.exitCode = 1;
+if (results.some(r => r.status === 'ERROR' || r.status === 'GAP')) process.exitCode = 1;

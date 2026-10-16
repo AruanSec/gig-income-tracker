@@ -1,5 +1,9 @@
 # OWASP Top 10 security assessment
 
+> Historical assessment. The eight application findings were subsequently addressed;
+> see [Security remediation](SECURITY_REMEDIATION.md) for changes, verification and
+> remaining deployment responsibilities. The findings below describe the original baseline.
+
 Assessed 2026-10-16 UTC. Application baseline: `588ffd8d40213bfc38d90b3e544d59798736e738`.
 Final probes ran on `staging` at `e6ccd1b317de4af312508dec73c81925a271d2c0`.
 Only the assessment runner was added to the application baseline during testing.

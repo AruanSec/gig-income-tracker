@@ -1,3 +1,4 @@
+import { adminEmail, adminPassword } from './provision.mjs';
 // Builds and exercises an isolated Compose project. Never uses the operator's volume.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -34,14 +35,14 @@ async function health(base, endpoint = '/api/health') {
   return fetch(base + endpoint, { signal: AbortSignal.timeout(12_000) });
 }
 async function api(base, method, endpoint, token, data) {
-  const response = await fetch(base + endpoint, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  const response = await fetch(base + endpoint, { method, headers: { 'Content-Type': 'application/json', 'X-Auth-Mode': 'bearer', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: data === undefined ? undefined : JSON.stringify(data), signal: AbortSignal.timeout(15_000) });
   const body = await response.json(); assert.ok(response.ok, `${method} ${endpoint}: ${response.status} ${JSON.stringify(body)}`); return body;
 }
 async function report(base, token) {
   const context = await browser.newContext({ acceptDownloads: true, timezoneId: 'America/Toronto' });
   try {
-    await context.addInitScript(value => localStorage.setItem('gig_auth_token', value), token);
+    await context.addCookies([{ name: 'gig_session', value: token, url: base, httpOnly: true, secure: true, sameSite: 'Strict' }]);
     const page = await context.newPage(); await page.goto(base);
     await page.locator('#tab-tax-trigger').click();
     await page.locator('#tax-tab-view select').first().selectOption('2026');
@@ -52,7 +53,7 @@ async function report(base, token) {
 
 try {
   const port = await freePort(); const recoveryPort = await freePort(); const base = `http://127.0.0.1:${port}`;
-  writeFileSync(envfile, 'POSTGRES_USER=gig_verify\nPOSTGRES_PASSWORD=isolated-deployment-test-only\nPOSTGRES_DB=gig_verify\nGEMINI_API_KEY=\n', { mode: 0o600 });
+  writeFileSync(envfile, 'POSTGRES_USER=gig_verify\nPOSTGRES_PASSWORD=isolated-deployment-test-only\nPOSTGRES_DB=gig_verify\nAPP_DATABASE_PASSWORD=isolated-app-password-only\nGEMINI_API_KEY=\n', { mode: 0o600 });
   writeFileSync(override, `services:
   postgres:
     container_name: !reset null
@@ -73,13 +74,16 @@ try {
   assert.deepEqual(dbInspect.HostConfig.PortBindings || {}, {});
   assert.equal(appInspect.HostConfig.PortBindings['3000/tcp'][0].HostIp, '127.0.0.1');
   assert.equal(appInspect.Config.User, 'node');
+  const roleFlags = dc(['exec', '-T', 'postgres', 'psql', '-U', 'gig_verify', '-d', 'gig_verify', '-Atc', "SELECT rolsuper OR rolcreatedb OR rolcreaterole FROM pg_roles WHERE rolname='gig_app'"]).toString().trim();
+  assert.equal(roleFlags, 'f');
   assert.equal(appInspect.State.Health.Status, 'healthy');
   assert.equal((await health(base, '/')).status, 200);
   console.log('PASS: image, private ports, non-root runtime and readiness');
 
   const password = 'Deployment-check-password-2026'; const email = 'deployment@example.test';
-  const { token } = await api(base, 'POST', '/api/auth/signup', null, { email, password });
-  await api(base, 'POST', '/api/auth/signup', null, { email: 'second@example.test', password });
+  dc(['exec', '-T', 'tax-mileage-app', 'node', 'dist/create-admin.cjs'], { input: JSON.stringify({ email, password }) });
+  const { token } = await api(base, 'POST', '/api/auth/login', null, { email, password });
+  await api(base, 'POST', '/api/admin/users', token, { email: 'second@example.test', password });
   const records = {
     income: { startDate: '2026-01-01', endDate: '2026-01-01', trips: 1, onlineMinutes: 60, activeMinutes: 30, netFare: 100.10, tips: .20, taxes: .10 },
     mileage: { date: '2026-01-01', purpose: 'Deployment test', startOdometer: 100, endOdometer: 125, tripType: 'Delivery' },
@@ -97,7 +101,7 @@ try {
   browser = await chromium.launch({ headless: true });
   const csvBefore = await report(base, token);
   assert.ok(csvBefore.includes('"Gross Income (Net Fare + Tips)","110.30"'));
-  console.log('PASS: signup, CRUD, custom rates and browser CSV export from the image');
+  console.log('PASS: administrator provisioning, login, CRUD, custom rates and browser CSV export from the image');
   const loginAttempt = forwarded => fetch(base + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': forwarded }, body: JSON.stringify({ email: 'missing@example.test', password }) });
   for (let i = 0; i < 20; i++) assert.equal((await loginAttempt('198.51.100.1')).status, 400);
   assert.equal((await loginAttempt('198.51.100.1')).status, 429);
@@ -131,14 +135,15 @@ try {
   const dumpFile = path.join(tmp, 'database.dump'); writeFileSync(dumpFile, dump, { mode: 0o600 });
   assert.ok(dump.length > 0);
   dc(['exec', '-T', 'postgres', 'createdb', '-U', 'gig_verify', 'gig_recovery']);
-  dc(['exec', '-T', 'postgres', 'pg_restore', '-U', 'gig_verify', '-d', 'gig_recovery', '--no-owner', '--no-privileges', '--single-transaction', '--exit-on-error'], { input: readFileSync(dumpFile) });
+  dc(['exec', '-T', 'postgres', 'psql', '-U', 'gig_verify', '-d', 'gig_recovery', '-c', 'ALTER SCHEMA public OWNER TO gig_app']);
+  dc(['exec', '-T', 'postgres', 'pg_restore', '-U', 'gig_verify', '-d', 'gig_recovery', '--no-owner', '--no-privileges', '--role=gig_app', '--single-transaction', '--exit-on-error'], { input: readFileSync(dumpFile) });
   for (const db of ['gig_verify', 'gig_recovery']) {
     const count = dc(['exec', '-T', 'postgres', 'psql', '-U', 'gig_verify', '-d', db, '-Atc', 'SELECT count(*) FROM users']).toString().trim();
     assert.equal(count, '2');
   }
   const currentNetwork = Object.keys(inspect(id('postgres')).NetworkSettings.Networks)[0];
   docker(['run', '-d', '--name', recoveryContainer, '--network', currentNetwork, '-p', `127.0.0.1:${recoveryPort}:3000`,
-    '-e', 'DATABASE_URL=postgresql://gig_verify:isolated-deployment-test-only@postgres:5432/gig_recovery',
+    '-e', 'HOST=0.0.0.0', '-e', 'DATABASE_URL=postgresql://gig_app:isolated-app-password-only@postgres:5432/gig_recovery',
     dc(['images', '-q', 'tax-mileage-app']).toString().trim()]);
   const recovered = `http://127.0.0.1:${recoveryPort}`;
   await waitFor(async () => (await health(recovered)).status === 200, 'restored database app');

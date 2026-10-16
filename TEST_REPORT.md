@@ -1,5 +1,46 @@
 # Test report
 
+## Security remediation verification (2026-10-16 UTC)
+
+The eight findings in the historical assessment below are addressed in
+[SECURITY_REMEDIATION.md](docs/SECURITY_REMEDIATION.md). Public signup is disabled;
+administrators provision accounts. Existing installations must follow the
+[security upgrade guide](docs/SECURITY_UPGRADE.md).
+
+Application checks ran on staging `25c29fe43fbc86f0aa283de021d461f7c48398b9`.
+After correcting a same-origin header in the browser test fixture, browser and
+Docker checks passed on staging `142d347` (feature `d3d40a5`). That final change
+only affects the browser fixture; application source matches the earlier checks.
+
+| Check | Result |
+|---|---|
+| Unit/regression suite with disposable PostgreSQL | Four original groups and 22 tests passed; zero skipped |
+| TypeScript checking | Passed |
+| Production build | Passed; existing large frontend bundle warning remains |
+| SQLite API integration | 16 passed; zero skipped |
+| PostgreSQL API integration | 16 passed; zero skipped |
+| OWASP security regression | 25 PASS, zero GAP or ERROR |
+| Chromium save/authentication workflows | 21 passed |
+| Docker deployment and recovery | All five groups passed |
+| npm dependency audit | Zero known advisories |
+| Existing database role migration | Passed twice against populated disposable database; restricted role owns six app tables |
+
+Docker checks built the pinned production image, installed dependencies cleanly,
+verified private ports, non-root runtime and restricted database role, provisioned
+an administrator, exercised CRUD and browser CSV export, checked trusted proxy
+behavior, recovered from database outage/restarts and container recreation, and
+restored a dump into a separate database before comparing records and CSV output.
+Built image config: `sha256:c7517c8400437fccc8d2e654191f969d7ff8debf96f0cea19a701537336cced2`.
+
+Sanitized [probe evidence](docs/security/owasp-remediation-results.json) and
+[dependency audit](docs/security/npm-audit-remediation.json) are retained.
+Shell/JavaScript syntax, Compose configuration, workflow YAML, documentation links
+and whitespace checks passed. Tests used disposable local data, Node 22.22.1,
+PostgreSQL 16.15 and Chromium through Playwright 1.64.0. External AI calls were
+disabled. No intended server deployment or hosted CI run was performed; this
+checkout has no Git remote. Historical release-candidate evidence below remains
+specific to its recorded revision, rather than certifying a new production release.
+
 ## OWASP Top 10 security assessment (2026-10-16 UTC)
 
 See [docs/SECURITY_ASSESSMENT.md](docs/SECURITY_ASSESSMENT.md) for the complete

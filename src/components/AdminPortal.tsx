@@ -77,14 +77,10 @@ export default function AdminPortal() {
   const [editUserPassword, setEditUserPassword] = useState("");
   const [editUserRole, setEditUserRole] = useState("user");
 
-  const token = localStorage.getItem("gig_auth_token");
-
   // Fetch Stats
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/admin/stats", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch("/api/admin/stats");
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -100,9 +96,7 @@ export default function AdminPortal() {
   // Fetch Users list
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/admin/users", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch("/api/admin/users");
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
@@ -115,9 +109,9 @@ export default function AdminPortal() {
     try {
       setLoading(true);
       const [incomeRes, mileageRes, expensesRes] = await Promise.all([
-        fetch("/api/admin/data/income", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/admin/data/mileage", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/admin/data/expenses", { headers: { Authorization: `Bearer ${token}` } })
+        fetch("/api/admin/data/income"),
+        fetch("/api/admin/data/mileage"),
+        fetch("/api/admin/data/expenses")
       ]);
 
       if (incomeRes.ok && mileageRes.ok && expensesRes.ok) {
@@ -138,7 +132,6 @@ export default function AdminPortal() {
   };
 
   useEffect(() => {
-    if (!token) return;
     setError(null);
     setSuccessMessage(null);
 
@@ -166,8 +159,7 @@ export default function AdminPortal() {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           email: newUserEmail,
@@ -204,8 +196,7 @@ export default function AdminPortal() {
       const res = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           email: editUserEmail,
@@ -238,8 +229,7 @@ export default function AdminPortal() {
 
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        method: "DELETE"
       });
 
       if (res.ok) {
@@ -260,8 +250,7 @@ export default function AdminPortal() {
     if (!confirm("Delete this income entry permanently?")) return;
     try {
       const res = await fetch(`/api/admin/data/income/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        method: "DELETE"
       });
       if (res.ok) {
         setIncomeEntries(incomeEntries.filter(e => e.id !== id));
@@ -276,8 +265,7 @@ export default function AdminPortal() {
     if (!confirm("Delete this mileage log permanently?")) return;
     try {
       const res = await fetch(`/api/admin/data/mileage/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        method: "DELETE"
       });
       if (res.ok) {
         setMileageEntries(mileageEntries.filter(e => e.id !== id));
@@ -292,8 +280,7 @@ export default function AdminPortal() {
     if (!confirm("Delete this expense record permanently?")) return;
     try {
       const res = await fetch(`/api/admin/data/expenses/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        method: "DELETE"
       });
       if (res.ok) {
         setExpenseEntries(expenseEntries.filter(e => e.id !== id));
@@ -329,7 +316,7 @@ export default function AdminPortal() {
 
   return (
     <div className="space-y-6" id="admin-portal-root">
-      
+
       {/* Messages */}
       {error && (
         <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-4 border border-red-100 dark:border-red-900/40 flex items-start gap-3 text-left" id="admin-error-box">
@@ -412,7 +399,7 @@ export default function AdminPortal() {
 
       {/* Tab Render Area */}
       <div className="space-y-6">
-        
+
         {/* TAB 1: stats */}
         {activeSubTab === "stats" && stats && (
           <div className="space-y-6 text-left animate-in fade-in duration-200">
@@ -461,7 +448,7 @@ export default function AdminPortal() {
 
             {/* Tables Info Row */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
+
               {/* Table stats list */}
               <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                 <div>
@@ -683,7 +670,7 @@ export default function AdminPortal() {
             {/* Selected Inner Table */}
             <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                
+
                 {dataSubTab === "income" && (
                   <table className="w-full text-left border-collapse">
                     <thead>

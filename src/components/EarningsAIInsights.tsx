@@ -54,12 +54,10 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
     setError(null);
 
     try {
-      const token = localStorage.getItem("gig_auth_token");
       const res = await fetch("/api/insights/earnings-analysis", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({})
       });
@@ -170,7 +168,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
       {/* Analysis Content */}
       {analysis && !loading && (
         <div className="space-y-6 relative z-10">
-          
+
           {/* Executive Rating & Top KPI Bar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">

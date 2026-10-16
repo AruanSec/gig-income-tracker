@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import { provisionAdmin, adminPassword } from "./provision.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -19,6 +21,22 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
   await new Promise<void>(resolve => socket.close(() => resolve()));
   const base = `http://127.0.0.1:${port}`;
   const url = process.env.TEST_DATABASE_URL;
+  const appEnv = { ...process.env, NODE_ENV: url ? "production" : "development", DISABLE_HMR: "true", PORT: String(port),
+    DATABASE_URL: url || "postgresql://test:test@127.0.0.1:1/test", DB_PATH: dbPath, GEMINI_API_KEY: "" };
+  const adminEmail = `api-admin-${Date.now()}@example.test`;
+  provisionAdmin(appEnv, Boolean(url), adminEmail);
+  const legacyToken = crypto.randomBytes(32).toString("hex");
+  const legacyDigest = `sha256$${crypto.createHash("sha256").update(legacyToken).digest("hex")}`;
+  if (url) {
+    const seed = new pg.Pool({ connectionString: url });
+    try { await seed.query("INSERT INTO sessions(id,user_id,expires_at) SELECT $1,id,$2 FROM users WHERE email=$3", [legacyToken, new Date(Date.now()+3600_000).toISOString(), adminEmail]); }
+    finally { await seed.end(); }
+  } else {
+    const seed = new Database(dbPath);
+    try { seed.prepare("INSERT INTO sessions(id,user_id,expires_at) SELECT ?,id,? FROM users WHERE email=?").run(legacyToken, new Date(Date.now()+3600_000).toISOString(), adminEmail); }
+    finally { seed.close(); }
+  }
+  let adminToken: string;
   const app = spawn(process.execPath, url ? ["dist/server.cjs"] : ["--import", "tsx", "server.ts"], {
     env: { ...process.env, NODE_ENV: url ? "production" : "development", DISABLE_HMR: "true", PORT: String(port),
       DATABASE_URL: url || "postgresql://test:test@127.0.0.1:1/test", DB_PATH: dbPath, GEMINI_API_KEY: "" },
@@ -27,8 +45,18 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
   let logs = "";
   app.stdout.on("data", data => logs += data); app.stderr.on("data", data => logs += data);
   async function api(method: string, endpoint: string, data?: unknown, token?: string) {
+    if (endpoint === "/api/auth/signup") {
+      if (!adminToken) {
+        const login = await api("POST", "/api/auth/login", { email: adminEmail, password: adminPassword });
+        adminToken = login.body.token;
+      }
+      const created = await api("POST", "/api/admin/users", data, adminToken);
+      if (created.status !== 201) return created;
+      const login = await api("POST", "/api/auth/login", data);
+      return { ...login, status: 201 };
+    }
     const response = await fetch(base + endpoint, { method,
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { "Content-Type": "application/json", "X-Auth-Mode": "bearer", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: data === undefined ? undefined : JSON.stringify(data),
     });
     return { status: response.status, body: await response.json() };
@@ -41,6 +69,19 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     assert.ok(ready, logs);
+    await t.test("legacy sessions migrate to digests and remain valid without raw-token storage", async () => {
+      assert.equal((await api("GET", "/api/auth/me", undefined, legacyToken)).status, 200);
+      if (url) {
+        const inspect = new pg.Pool({ connectionString: url });
+        try { const ids = (await inspect.query("SELECT id FROM sessions")).rows.map(row => row.id); assert.ok(!ids.includes(legacyToken)); assert.ok(ids.includes(legacyDigest)); }
+        finally { await inspect.end(); }
+      } else {
+        const inspect = new Database(dbPath);
+        try { const ids = (inspect.prepare("SELECT id FROM sessions").all() as {id:string}[]).map(row => row.id); assert.ok(!ids.includes(legacyToken)); assert.ok(ids.includes(legacyDigest)); }
+        finally { inspect.close(); }
+      }
+      assert.equal((await api("GET", "/api/auth/me", undefined, legacyDigest)).status, 401);
+    });
     const suffix = Date.now();
     const email = `api-${suffix}@example.test`;
     const password = "API-test-password-2026";

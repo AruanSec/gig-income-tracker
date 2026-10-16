@@ -96,24 +96,14 @@ export default function App() {
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) {
-        setIsAuthenticated(false);
-        return;
-      }
       try {
-        const response = await fetch("/api/auth/me", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        const response = await fetch("/api/auth/me");
         if (response.ok) {
           const data = await response.json();
           setUserEmail(data.email);
           setUserRole(data.role || "user");
           setIsAuthenticated(true);
         } else {
-          localStorage.removeItem("gig_auth_token");
           setIsAuthenticated(false);
         }
       } catch (e) {
@@ -126,15 +116,13 @@ export default function App() {
 
   // Fetch full data set when authenticated
   const fetchData = async () => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
     setLoadingData(true);
     try {
       const [incomeRes, mileageRes, expensesRes, ratesRes] = await Promise.all([
-        fetch("/api/income", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/mileage", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/expenses", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/settings/cra-rates", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/income"),
+        fetch("/api/mileage"),
+        fetch("/api/expenses"),
+        fetch("/api/settings/cra-rates")
       ]);
 
       if (incomeRes.ok && mileageRes.ok && expensesRes.ok && ratesRes.ok) {
@@ -163,15 +151,10 @@ export default function App() {
   }, [isAuthenticated]);
 
   // Auth Actions
-  const handleAuthSuccess = async (token: string, email: string) => {
-    localStorage.setItem("gig_auth_token", token);
+  const handleAuthSuccess = async (email: string) => {
     setUserEmail(email);
     try {
-      const response = await fetch("/api/auth/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+      const response = await fetch("/api/auth/me");
       if (response.ok) {
         const data = await response.json();
         setUserRole(data.role || "user");
@@ -183,16 +166,13 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (token) {
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-      } catch (e) {}
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Sign out failed.");
+    } catch {
+      alert("Unable to sign out. Check your connection and try again.");
+      return;
     }
-    localStorage.removeItem("gig_auth_token");
     setUserEmail(null);
     setUserRole("user");
     setIsAuthenticated(false);
@@ -243,12 +223,10 @@ export default function App() {
   // Handle deleting logs
   const handleDeleteEntry = async (id: string) => {
     if (confirm("Are you sure you want to delete this shift entry? This cannot be undone.")) {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) return;
+
       try {
         const res = await fetch(`/api/income/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${token}` }
+          method: "DELETE"
         });
         if (res.ok) {
           setEntries((prev) => prev.filter((item) => item.id !== id));
@@ -266,14 +244,10 @@ export default function App() {
   };
 
   const handleSaveCraRates = async (rateData: CraRate) => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) throw new Error("No authorization token found.");
-
     const res = await fetch("/api/settings/cra-rates", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(rateData)
     });
@@ -306,12 +280,10 @@ export default function App() {
   // Handle deleting mileage logs
   const handleDeleteMileageEntry = async (id: string) => {
     if (confirm("Are you sure you want to delete this business trip? This cannot be undone.")) {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) return;
+
       try {
         const res = await fetch(`/api/mileage/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${token}` }
+          method: "DELETE"
         });
         if (res.ok) {
           setMileageEntries((prev) => prev.filter((item) => item.id !== id));
@@ -347,12 +319,10 @@ export default function App() {
   // Handle deleting vehicle expenses
   const handleDeleteVehicleExpense = async (id: string) => {
     if (confirm("Are you sure you want to delete this vehicle expense? This cannot be undone.")) {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) return;
+
       try {
         const res = await fetch(`/api/expenses/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${token}` }
+          method: "DELETE"
         });
         if (res.ok) {
           setVehicleExpenses((prev) => prev.filter((item) => item.id !== id));
@@ -378,15 +348,12 @@ export default function App() {
   // Restore mock dataset for testing & demonstration
   const handleResetToDemo = async () => {
     if (confirm("Would you like to reset the database to sample driver data? Your custom shifts and trips will be overwritten.")) {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) return;
 
       try {
         const res = await fetch("/api/restore", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             income: INITIAL_INCOME_ENTRIES,
@@ -410,15 +377,12 @@ export default function App() {
   // Empty Database / Purge All Data
   const handleEmptyDatabase = async () => {
     if (confirm("Are you sure you want to empty your database? All of your income, mileage, and vehicle expense records will be permanently deleted on the server. This cannot be undone.")) {
-      const token = localStorage.getItem("gig_auth_token");
-      if (!token) return;
 
       try {
         const res = await fetch("/api/restore", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             income: [],
@@ -442,12 +406,8 @@ export default function App() {
 
   // Backup Data Trigger
   const handleBackupData = async () => {
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
     try {
-      const res = await fetch("/api/backup", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await fetch("/api/backup");
       if (res.ok) {
         const data = await res.json();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -473,9 +433,6 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = localStorage.getItem("gig_auth_token");
-    if (!token) return;
-
     if (!confirm("Restoring data will replace all your current logs on the server. Are you sure you want to proceed?")) {
       e.target.value = "";
       return;
@@ -488,8 +445,7 @@ export default function App() {
       const res = await fetch("/api/restore", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(backupData)
       });
@@ -594,7 +550,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300" id="app-root">
-      
+
       {/* Header Area */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs animate-in fade-in slide-in-from-top-4 duration-300" id="app-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -603,7 +559,7 @@ export default function App() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Revenue & Mileage Tracker</h1>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Track earnings, business mileage, and planning estimates</p>
-              
+
               <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Active Sync: <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">{userEmail}</span></span>
@@ -732,10 +688,6 @@ export default function App() {
                 />
               </label>
 
-
-
-
-
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
@@ -762,8 +714,8 @@ export default function App() {
               {activeTab !== "tax" && activeTab !== "admin" && (
                 <button
                   onClick={
-                    activeTab === "income" 
-                      ? handleCreateNewEntry 
+                    activeTab === "income"
+                      ? handleCreateNewEntry
                       : mileageSubTab === "expenses"
                         ? handleCreateNewVehicleExpense
                         : handleCreateNewMileageEntry
@@ -773,8 +725,8 @@ export default function App() {
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>
-                    {activeTab === "income" 
-                      ? "Log Weekly Income" 
+                    {activeTab === "income"
+                      ? "Log Weekly Income"
                       : mileageSubTab === "expenses"
                         ? "Log Vehicle Expense"
                         : "Log Business Trip"}
@@ -794,7 +746,7 @@ export default function App() {
           </div>
         )}
         <p className="text-xs text-slate-500">Planning only. Review saved annual rates, business-use percentage, and GST/HST eligibility before filing. Recorded GST/HST is not automatically recoverable.</p>
-        
+
         {/* Banner Informational Accent */}
         <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/45 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg shrink-0 mt-0.5">
@@ -923,7 +875,7 @@ export default function App() {
 
               {/* 3. Bento Layout: Trends Chart & Detailed Logs */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Chart Panel */}
                 <section className="lg:col-span-1 h-full" aria-label="Performance Chart">
                   <IncomeChart entries={entries} />
@@ -1005,7 +957,7 @@ export default function App() {
               {/* Sub-tab View Renderings */}
               <AnimatePresence mode="wait">
                 {mileageSubTab === "trips" && (
-                  <motion.section 
+                  <motion.section
                     key="trips-subview"
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1034,7 +986,7 @@ export default function App() {
                 )}
 
                 {mileageSubTab === "expenses" && (
-                  <motion.section 
+                  <motion.section
                     key="expenses-subview"
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1054,7 +1006,7 @@ export default function App() {
                 )}
 
                 {mileageSubTab === "combined" && (
-                  <motion.section 
+                  <motion.section
                     key="combined-subview"
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1214,7 +1166,7 @@ export default function App() {
                     <span>🧪 TEST RUNNER SHELL v1.0.0</span>
                     <span className="px-2 py-0.5 bg-emerald-950/55 text-emerald-400 text-[10px] rounded-md border border-emerald-800/40">ACTIVE</span>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
                       <span className="text-slate-500">&gt;</span>
@@ -1334,7 +1286,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             System Ready
           </span>
           <span className="text-slate-300 dark:text-slate-800">|</span>

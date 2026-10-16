@@ -1,5 +1,6 @@
 import express from "express";
 import net from "node:net";
+import { securityEvent } from "./sessionSecurity";
 import { ValidationError } from "./validation";
 
 export function configureProxy(app: express.Express, setting = process.env.TRUST_PROXY || ""): void {
@@ -38,10 +39,10 @@ export const requestErrorHandler: express.ErrorRequestHandler = (error, _req, re
 };
 
 /** Per-process fixed windows; bound memory and expire idle clients. */
-export function authenticationRateLimit(windowMs = 15 * 60_000, maxAttempts = 20, maxClients = 10_000): express.RequestHandler {
+export function authenticationRateLimit(windowMs = 15 * 60_000, maxAttempts = 20, maxClients = 10_000, keyFor: (req: express.Request) => string = req => req.ip || req.socket.remoteAddress || "unknown"): express.RequestHandler {
   const attempts = new Map<string, { count: number; resetAt: number }>();
   return (req, res, next) => {
-    const key = req.ip || req.socket.remoteAddress || "unknown";
+    const key = keyFor(req);
     const now = Date.now();
     let current = attempts.get(key);
     if (current && current.resetAt <= now) { attempts.delete(key); current = undefined; }
@@ -50,6 +51,7 @@ export function authenticationRateLimit(windowMs = 15 * 60_000, maxAttempts = 20
         for (const [client, state] of attempts) if (state.resetAt <= now) attempts.delete(client);
         if (attempts.size >= maxClients) {
           res.setHeader("Retry-After", "60");
+          securityEvent(req, "rate_limit", "blocked");
           res.status(429).json({ error: "Authentication is busy. Try again later." }); return;
         }
       }
@@ -57,6 +59,7 @@ export function authenticationRateLimit(windowMs = 15 * 60_000, maxAttempts = 20
     }
     if (current.count >= maxAttempts) {
       res.setHeader("Retry-After", String(Math.max(1, Math.ceil((current.resetAt - now) / 1000))));
+      securityEvent(req, "rate_limit", "blocked");
       res.status(429).json({ error: "Too many authentication attempts. Try again later." }); return;
     }
     current.count += 1;

@@ -1,12 +1,9 @@
+import { createAccount, authenticatePage } from "./browser-auth";
 import { expect, test, type Page } from "@playwright/test";
 
 let token: string;
 test.beforeAll(async ({ request }) => {
-  const result = await request.post("/api/auth/signup", { data: {
-    email: `forms-${Date.now()}@example.test`, password: "Forms-test-password-2026",
-  } });
-  expect(result.status()).toBe(201);
-  token = (await result.json()).token;
+  token = await createAccount(request, `forms-${Date.now()}@example.test`, "Forms-test-password-2026");
 });
 
 test.beforeEach(async ({ request }) => {
@@ -25,7 +22,7 @@ const forms = [
 ];
 
 async function openForm(page: Page, form: typeof forms[number]) {
-  await page.addInitScript(value => localStorage.setItem("gig_auth_token", value), token);
+  await authenticatePage(page, token);
   await page.goto("/");
   await expect(page.locator("#main-log-btn")).toBeVisible();
   if (form.resource !== "income") {
