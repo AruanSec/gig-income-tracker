@@ -135,6 +135,7 @@ try {
   });
   await check('raw-bearer-token-in-database', async () => {
     const r = await pool.query('SELECT id FROM sessions WHERE user_id=$1', [user.id]);
+    assert.equal((await request('GET', '/api/auth/me', undefined, r.rows[0].id)).status, 200);
     return { gap: r.rows.some(row => row.id === token), detail: 'A database-read compromise exposes a directly reusable session token' };
   });
   await check('security-headers-and-private-response-cache', async () => {
@@ -179,7 +180,7 @@ try {
     await context.addInitScript(value => localStorage.setItem('gig_auth_token', value), token);
     const page = await context.newPage();
     await page.goto(base);
-    await page.getByText(payload, { exact: true }).first().waitFor({ state: 'visible', timeout: 45000 });
+    await page.getByText(`"${payload}"`, { exact: true }).first().waitFor({ state: 'visible', timeout: 45000 });
     assert.equal(await page.evaluate(() => window.__securityXss), undefined);
     assert.equal(await page.locator('img[onerror]').count(), 0);
     await page.locator('#tab-tax-trigger').click();
@@ -196,6 +197,18 @@ try {
     for (let i = 0; i < 23; i++) last = await request('POST', '/api/auth/login', { email: 'missing@example.test', password }, undefined, { 'X-Forwarded-For': `192.0.2.${i + 1}` });
     assert.equal(last.status, 429); assert.ok(Number(last.headers.get('retry-after')) > 0);
     assert.equal((await request('GET', '/api/live')).status, 200);
+  });
+  await check('database-failure-is-generic-and-recovers', async () => {
+    await pool.query('ALTER TABLE income_entries RENAME TO security_failure_fixture');
+    try {
+      const r = await request('GET', '/api/income', undefined, token);
+      assert.equal(r.status, 500);
+      assert.deepEqual(r.body, { error: 'An unexpected server error occurred.' });
+      assert.equal((await request('GET', '/api/live')).status, 200);
+    } finally {
+      await pool.query('ALTER TABLE security_failure_fixture RENAME TO income_entries');
+    }
+    assert.equal((await request('GET', '/api/income', undefined, token)).status, 200);
   });
   await check('security-audit-trail', async () => {
     await pool.query('UPDATE users SET role=$1 WHERE id=$2', ['admin', user.id]);
