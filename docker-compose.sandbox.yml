@@ -1,0 +1,6 @@
+# Use inside Docker Sandboxes to allow access through the sandbox's port forwarding.
+# !override replaces the base localhost binding instead of adding a second binding.
+services:
+  tax-mileage-app:
+    ports: !override
+      - "0.0.0.0:3000:3000"

@@ -363,3 +363,18 @@ The optional external AI call excludes free-text notes, has a 15-second request 
 a bounded output, and a per-account five-request/hour limit. Credential changes have
 per-account limits, and password changes also have a client-IP limit. Limits are per
 process; multiple app instances need shared state.
+
+### Docker Sandboxes port access
+
+Inside Docker Sandboxes, publish the app on the sandbox interfaces using the
+optional override (requires Docker Compose 2.24.4 or later):
+
+```bash
+docker compose --env-file ../gig-income-tracker.env \
+  -f docker-compose.yml -f docker-compose.sandbox.yml up -d --wait
+```
+
+This replaces the localhost binding with `0.0.0.0:3000` inside the sandbox.
+Use the sandbox forwarding mechanism to reach port 3000 from your host.
+PostgreSQL remains unpublished. The base Compose file retains its localhost
+binding for deployments behind a reverse proxy.
