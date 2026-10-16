@@ -27,15 +27,16 @@ A full-stack web application designed for Canadian gig workers (Uber, Lyft, Door
 
 ## Deploy to a Linux server
 
-The recommended deployment runs the application and PostgreSQL with Docker Compose, with Caddy on the host providing HTTPS. The multi-stage Dockerfile uses Node 22 and runs the application as the unprivileged `node` user. PostgreSQL data lives in the `postgres_data` Docker volume; SQLite is a development fallback only.
+The recommended deployment runs the application and PostgreSQL with Docker Compose, with Tailscale Serve on the host providing HTTPS. The multi-stage Dockerfile uses Node 22 and runs the application as the unprivileged `node` user. PostgreSQL data lives in the `postgres_data` Docker volume; SQLite is a development fallback only.
 
 ### 1. Prepare the server and source code
 
-These instructions assume an Ubuntu or Debian server, a user with SSH and sudo access, and a domain such as `tracker.example.com` pointing to the server's public IP. Replace example domains and repository placeholders with your own values.
+These instructions assume an Ubuntu or Debian server, a user with SSH and sudo access, and Tailscale installed on the same host as Docker. Access uses the server's HTTPS `*.ts.net` name. Replace repository and hostname placeholders with your own values.
 
 - Install [Docker Engine and the Compose plugin](https://docs.docker.com/engine/install/). Use Docker Compose **2.24.4 or newer**; the server override below uses `!override` and `!reset`.
-- Install Caddy using its [Linux installation instructions](https://caddyserver.com/docs/install#debian-ubuntu-raspbian).
-- Allow inbound TCP ports **80 and 443** in the server/provider firewall and preserve your SSH access. Ports 3000 and 5432 do not need public access. Configure any domain AAAA record to reach this server as well, or remove an incorrect AAAA record.
+- Install [Tailscale](https://tailscale.com/download/linux), connect the server to your tailnet with `sudo tailscale up`, and confirm it appears in `tailscale status`.
+- Enable MagicDNS and HTTPS certificates in the tailnet DNS settings if needed. Client devices must join the tailnet and have permission to reach the service under its access rules.
+- Preserve your SSH access. This private Serve deployment needs no public domain records or public inbound ports 80, 443, 3000 or 5432. Tailscale handles connectivity through its own networking.
 - Enable Docker at boot: `sudo systemctl enable --now docker`. Run the commands below as a user authorized to use Docker.
 
 Copy the project source to `~/apps/gig-income-tracker`, or clone your repository:
@@ -99,7 +100,7 @@ dc() {
 ### 4. Configure the trusted host proxy
 
 `TRUST_PROXY` defaults to empty: forwarded headers are ignored. For the documented
-host-Caddy → loopback-published Docker app topology, trust only the Docker bridge
+host-Tailscale Serve → loopback-published Docker app topology, trust only the Docker bridge
 gateway seen by the app. Start the database to create the network, then inspect it:
 
 ```bash
@@ -111,14 +112,14 @@ docker inspect "$db_container_id" --format '{{range .NetworkSettings.Networks}}{
 Add the displayed gateway as an exact address to the external environment file,
 for example `TRUST_PROXY=172.18.0.1/32`. Use the actual result, not this example.
 Then build/start the app below. If you recreate the network, check the gateway
-again and recreate the app if it changed. For a direct Node.js app behind Caddy
+again and recreate the app if it changed. For a direct Node.js app behind Tailscale Serve
 on the same host, use the exact loopback addresses, for example
 `TRUST_PROXY=127.0.0.1/32,::1/128`.
 
 Only explicit IP addresses and nonzero CIDR ranges are accepted. Never use
 `true`, a hop count, or a blanket subnet to trust arbitrary forwarding headers.
 Keep the app port private: a caller reaching it from a trusted proxy address can
-supply forwarded client addresses. With the documented single Caddy proxy, each
+supply forwarded client addresses. With the documented single Tailscale Serve proxy, each
 client has its own authentication limit (20 attempts per 15 minutes); a spoofed
 address prepended to an untrusted client address cannot bypass that limit.
 The bounded limiter is per process and resets after restart; multiple app
@@ -138,24 +139,41 @@ The health response should contain `"status":"ok"` and `"database":"PostgreSQL"`
 
 Both services use `restart: unless-stopped`. Keep the project directory/name consistent across deployments so Compose reuses the same named volume. `dc down` preserves database data; **`dc down -v` deletes the database volume**.
 
-### 6. Enable HTTPS with Caddy
+### 6. Enable HTTPS with Tailscale Serve
 
-For a dedicated Caddy installation, put the following in `/etc/caddy/Caddyfile`, replacing the domain. If Caddy already serves other sites, add this site block to its existing configuration:
-
-```caddyfile
-tracker.example.com {
-    reverse_proxy 127.0.0.1:3000
-}
-```
+Run on the same host as Docker:
 
 ```bash
-sudo caddy validate --config /etc/caddy/Caddyfile
-sudo systemctl enable --now caddy
-sudo systemctl reload caddy
-curl --fail https://tracker.example.com/api/health
+tailscale status
+sudo tailscale serve --bg http://127.0.0.1:3000
+tailscale serve status
 ```
 
-Caddy obtains and renews the TLS certificate and redirects HTTP to HTTPS. Its certificate setup requires correct DNS and inbound access to ports 80/443. Open `https://tracker.example.com` and sign in using an administrator-created account. Public signup is disabled. To provision the first administrator, run the command below after starting the app:
+Follow any setup link printed by Tailscale to enable HTTPS certificates. Serve
+terminates TLS and forwards requests to the local app. The `--bg` configuration
+persists across restarts. If this Tailscale device already serves other applications,
+review `tailscale serve status` before changing its root route.
+
+Use the exact HTTPS address printed by Serve, for example
+`https://your-server.your-tailnet.ts.net`. From a permitted tailnet device, verify:
+
+```bash
+curl --fail https://your-server.your-tailnet.ts.net/api/health
+```
+
+Serve is private to your tailnet, subject to its access rules. Tailscale Funnel is
+a separate public-access feature and is not needed here. No `APP_URL`, certificate
+path or TLS key is required in the app environment. Production session cookies
+require HTTPS, so use the Serve URL for browser sign-in.
+
+This topology assumes Tailscale and Docker run on the same server. If Docker runs
+inside Docker Sandboxes while Tailscale runs on the outer host, forward sandbox
+port 3000 to that host first and point Serve at the forwarded address. The sandbox
+override at the end of this README publishes the port inside the sandbox; it does
+not configure the outer host's forwarding or trusted proxy address.
+
+Open the HTTPS URL and sign in using an administrator-created account. Public
+signup is disabled. To provision the first administrator after starting the app:
 
 ```bash
 read -r -p "Administrator email: " tracker_admin_email
@@ -189,7 +207,7 @@ dc stop tax-mileage-app
 dc exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --role=gig_app --single-transaction --exit-on-error' < "$backup_file"
 # Continue only after pg_restore succeeds.
 dc start tax-mileage-app
-curl --fail https://tracker.example.com/api/health
+curl --fail https://your-server.your-tailnet.ts.net/api/health
 ```
 
 ### Update or stop the application
@@ -204,7 +222,7 @@ dc config --quiet
 dc up -d --build
 dc ps
 dc logs --tail=100 tax-mileage-app
-curl --fail https://tracker.example.com/api/health
+curl --fail https://your-server.your-tailnet.ts.net/api/health
 ```
 
 A single application container can have a brief interruption during an update. To roll back, check out the previous compatible release and rebuild. If a release changed the database schema incompatibly, restore its matching pre-update backup too.
@@ -216,11 +234,12 @@ dc down
 
 ### Troubleshooting
 
-- **Caddy returns 502:** check `dc ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
+- **Serve cannot reach the app:** check `dc ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
 - **PostgreSQL authentication fails:** check the environment file and database logs. Existing volumes keep their original database credentials even if the environment file changes.
 - **Application repeatedly exits:** production requires reachable PostgreSQL and does not fall back to SQLite. Startup failures exit with a nonzero status; inspect logs and the health URL to diagnose the cause.
 - **All users receive authentication rate limits:** verify `TRUST_PROXY` matches the actual gateway/proxy address and recreate the app after changing it. Keep direct access private. Limits are per process; restart clears them. Multi-instance deployments need a shared limiter.
-- **Certificate setup fails:** check DNS, firewall rules, and `sudo journalctl -u caddy --no-pager -n 100`.
+- **HTTPS or tailnet access fails:** check `tailscale status`, `tailscale serve status`, MagicDNS, HTTPS certificate settings and tailnet access rules. Use the exact HTTPS hostname shown by Serve.
+- **Login works but writes return 403:** verify the trusted proxy address and use the HTTPS Serve URL consistently so forwarded scheme, Host and Origin agree.
 
 ---
 
@@ -346,7 +365,7 @@ browser tokens previously stored in localStorage are removed and users must sign
 Legacy PBKDF2 passwords require an administrator reset. API clients can request a bearer
 token at login with `X-Auth-Mode: bearer`; the UI never requests or persists one.
 Cookie-authenticated writes require a matching Origin. Configure the actual trusted proxy
-so HTTPS origin checks and HSTS work behind Caddy.
+so HTTPS origin checks and HSTS work behind Tailscale Serve.
 
 Run `npm run test:security` after building, with Docker and Chromium available. It creates
 its own PostgreSQL container and tests production-mode controls; any GAP or ERROR fails
