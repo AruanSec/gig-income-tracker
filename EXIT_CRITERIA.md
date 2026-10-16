@@ -1,6 +1,6 @@
 # Production Release Exit Criteria
 
-Status: 2026-10-15. Baseline: `7b87a53`.
+Status: 2026-10-16 UTC. Locally verified candidate: `fcb6528`.
 
 **Release readiness remains open.** Application fixes and local Docker recovery
 checks have passed. Hosted CI, tax review, production operations and remaining
@@ -45,7 +45,7 @@ See [TEST_REPORT.md](TEST_REPORT.md) for results and limitations.
 | Status | ID | Exit condition and required evidence |
 |---|---|---|
 | Open | V1 | Run the maintained GitHub Actions workflow successfully. Record the workflow URL and tested commit; both database backends, migrations, Chromium and Docker deployment checks must pass. |
-| Open | V2 | Verify the final release candidate from a clean install: `npm ci`, `npm test`, `npm run typecheck`, `npm run build`, both API suites and `npm run test:e2e`. Record versions, results and candidate SHA. Earlier browser results are historical until repeated for that candidate. |
+| Passed locally | V2 | Candidate `fcb6528` verified from clean `npm ci` on staging `8c4069c` with an identical tracked tree: unit/migration tests (no skips), TypeScript, production build, both API suites and all 21 Chromium checks passed. Docker recovery also passed on retry. Versions and evidence are in [TEST_REPORT.md](TEST_REPORT.md). Repeat for any subsequent application change. |
 | Passed locally | V3 | Actual image build, fresh PostgreSQL volume, signup, financial CRUD, custom rates and browser CSV export pass. Records survive app restart, database outage/recovery and Compose recreation without deleting the volume. |
 | Partial | V4 | Local dump/restore already reproduces accounts, records, rates and CSV exactly. Establish scheduled off-server backups, retention, protected backup access and failure alerts; restore an off-server copy and record recovery time and acceptable data loss. |
 | Open | V5 | On the intended server, verify DNS, HTTPS and certificate renewal, private database access, loopback app access, restart after reboot and an upgrade/rollback rehearsal. Record commands, outcomes and deployed image/commit. No server deployment has occurred. |

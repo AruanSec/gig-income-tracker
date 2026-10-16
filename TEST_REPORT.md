@@ -1,5 +1,51 @@
 # Test report
 
+## Clean release-candidate verification (2026-10-16 UTC)
+
+Verified on `staging` at `8c4069cec88cc5317445cd4e9609e6998443fd15`.
+Its complete tracked tree matched candidate `main` commit
+`fcb65283addb7d7c5bcc027817d63b3c20a577c4` (`git diff main staging --exit-code`).
+No application changes were needed. This evidence update is maintained on
+`feature/release-candidate-verification`, then checked on `staging` before promotion.
+
+Environment: Node 22.22.1, npm 9.2.0, PostgreSQL 16.15, Playwright 1.64.0,
+Docker Engine 29.7.2 and Docker Compose 5.5.0. Tests used disposable SQLite,
+a fresh PostgreSQL container, and an isolated Compose project and volumes.
+Chromium used the existing temporary library/font setup through
+`LD_LIBRARY_PATH=/tmp/gig-browser-libs/usr/lib/x86_64-linux-gnu` and
+`FONTCONFIG_FILE=/tmp/gig-browser-libs/fonts.conf`. No normal development or
+production database was used.
+
+| Check on staging | Result |
+|---|---|
+| `npm ci` | PASS: clean install, 313 packages; advisory endpoint returned 502 during install, so this is not evidence of a successful security audit |
+| `npm test` with disposable `TEST_DATABASE_URL` | PASS: four original groups and 20 regression tests, zero skips, including PostgreSQL migrations |
+| `npm run typecheck` | PASS |
+| `npm run build` | PASS: existing approximately 1.20 MB JavaScript bundle warning |
+| `npm run test:api` with isolated SQLite | PASS: 15 tests, zero skips |
+| `npm run test:api` with disposable PostgreSQL | PASS: 15 tests, zero skips |
+| `npm run test:e2e` | PASS: all 21 Chromium tests in 8.2 minutes |
+| `npm run test:deployment` | PASS on retry: actual production image, private ports, non-root runtime, CRUD, proxy limits, persistence and dump/restore |
+
+The first deployment attempt stopped before the build when Docker Hub's
+anonymous-token endpoint returned EOF. A complete retry passed with image
+`sha256:66eb30081dc876c284317afeb8f128fd011ff8808461e5d51f2b1ff5f274b364`
+in disposable project `gig-verify-1792110423941`. Recovery checks verified
+readiness/liveness during database outage, reconnection, app restart and Compose
+recreation. Restoring into a separate database preserved accounts, records,
+custom rates and browser CSV reports. Disposable test containers and volumes
+were removed after verification.
+
+Local command logs are `/tmp/gig-release-{unit,typecheck,build,api-sqlite,api-postgres,e2e}.log`
+and `/tmp/gig-release-deployment{,-retry}.log`; these temporary logs may disappear.
+The tables above retain the outcomes and exact tested revisions.
+
+This completes local gate V2 for the candidate above. No Git remote is configured,
+so an upstream freshness check and hosted Actions run could not be performed.
+V1 remains open. Qualified Canadian tax review, scheduled off-server backups,
+intended-server HTTPS/reboot/rollback verification and broader V7 workflow checks
+remain open or partial. No staging or production server was deployed.
+
 ## API reliability and Docker recovery verification (2026-10-15)
 
 Implemented on `feature/api-reliability-and-deployment-verification` and verified
