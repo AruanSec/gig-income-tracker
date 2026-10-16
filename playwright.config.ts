@@ -8,11 +8,11 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: { baseURL: "http://127.0.0.1:4173", headless: true, trace: "retain-on-failure" },
   webServer: {
-    command: "npm run dev",
+    command: "node tests/browser-server.mjs",
     url: "http://127.0.0.1:4173/api/health",
     reuseExistingServer: false,
     env: { NODE_ENV: "development", DISABLE_HMR: "true", PORT: "4173", DB_PATH: ":memory:",
       DATABASE_URL: "postgresql://test:test@127.0.0.1:1/test", GEMINI_API_KEY: "" },
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });

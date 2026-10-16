@@ -1,3 +1,4 @@
+import { tokenDigest } from "./sessionSecurity";
 import { migrateSqliteMoney, migratePostgresMoney, decodeMoneyRows } from "./moneyMigration";
 import pg from "pg";
 import Database from "better-sqlite3";
@@ -134,6 +135,17 @@ export async function initDatabase(): Promise<DBClient> {
       try { await migratePostgresMoney(migrationClient); }
       finally { migrationClient.release(); }
 
+      // Upgrade legacy plaintext session IDs atomically without persisting another raw copy.
+      const sessionClient = await pool.connect();
+      try {
+        await sessionClient.query("BEGIN");
+        await sessionClient.query("LOCK TABLE sessions IN ACCESS EXCLUSIVE MODE");
+        const legacy = await sessionClient.query("SELECT id FROM sessions WHERE id NOT LIKE 'sha256$%'");
+        for (const row of legacy.rows) await sessionClient.query("UPDATE sessions SET id=$1 WHERE id=$2", [tokenDigest(row.id), row.id]);
+        await sessionClient.query("COMMIT");
+      } catch (error) { await sessionClient.query("ROLLBACK"); throw error; }
+      finally { sessionClient.release(); }
+
       await pool.query('CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at)');
       await pool.query('CREATE INDEX IF NOT EXISTS income_user_date_idx ON income_entries (user_id, "startDate")');
       await pool.query('CREATE INDEX IF NOT EXISTS mileage_user_date_idx ON mileage_entries (user_id, date)');
@@ -252,6 +264,10 @@ export async function initDatabase(): Promise<DBClient> {
   `);
 
   migrateSqliteMoney(sqliteDb);
+  sqliteDb.transaction(() => {
+    const legacy = sqliteDb!.prepare("SELECT id FROM sessions WHERE id NOT LIKE 'sha256$%'").all() as { id: string }[];
+    for (const row of legacy) sqliteDb!.prepare("UPDATE sessions SET id=? WHERE id=?").run(tokenDigest(row.id), row.id);
+  })();
 
   sqliteDb.exec(`
     CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);

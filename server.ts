@@ -1,3 +1,5 @@
+import { generateSalt, hashPassword, verifyPassword } from "./src/passwordSecurity";
+import { sessionToken, tokenDigest, setSessionCookie, securityEvent, SESSION_AGE } from "./src/sessionSecurity";
 import { configureProxy, authenticationRateLimit, apiError, requestErrorHandler } from "./src/httpPolicy";
 import { sumMoney } from "./src/money";
 import express from "express";
@@ -29,27 +31,6 @@ function getGenAI(): GoogleGenAI {
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Password Cryptography Helpers
-function generateSalt(): string {
-  return crypto.randomBytes(16).toString("hex");
-}
-
-async function hashPassword(password: string, salt: string): Promise<string> {
-  const derived = await new Promise<Buffer>((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (error, key) => error ? reject(error) : resolve(key));
-  });
-  return `scrypt$${derived.toString("hex")}`;
-}
-
-async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
-  const candidate = storedHash.startsWith("scrypt$")
-    ? await hashPassword(password, salt)
-    : crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
-  const left = Buffer.from(candidate);
-  const right = Buffer.from(storedHash);
-  return left.length === right.length && crypto.timingSafeEqual(left, right);
-}
-
 function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -58,10 +39,31 @@ async function startServer() {
   const app = express();
   app.disable("x-powered-by");
   configureProxy(app);
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "no-referrer");
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'");
+    }
+    if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=31536000");
+    if (req.path.startsWith("/api")) res.setHeader("Cache-Control", "no-store");
+    // Cross-origin browser writes are rejected before any authentication work.
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      const origin = req.get("origin");
+      const expected = `${req.protocol}://${req.get("host")}`;
+      const usesCookie = Boolean(req.headers.cookie) && !req.headers.authorization;
+      if ((origin && origin !== expected) || (usesCookie && !origin) || req.get("sec-fetch-site") === "cross-site") {
+        securityEvent(req, "csrf", "blocked");
+        res.status(403).json({ error: "Cross-origin request denied." }); return;
+      }
+    }
+    // Audit privileged changes, backups/restores and authentication outcomes.
+    if (req.path.startsWith("/api/auth") || req.path.startsWith("/api/admin") || req.path === "/api/restore" || req.path === "/api/backup") {
+      res.on("finish", () => securityEvent(req, req.path.startsWith("/api/admin/users/") ? `admin_user_${req.method.toLowerCase()}` :
+        req.path.startsWith("/api/admin/data/") ? `admin_record_${req.method.toLowerCase()}` : `${req.method} ${req.route?.path || "unknown_route"}`,
+        String(res.statusCode), typeof req.params.id === "string" ? req.params.id.slice(0, 80) : undefined));
+    }
     next();
   });
   app.use(express.json({ limit: "2mb" }));
@@ -74,16 +76,17 @@ async function startServer() {
   const db: DBClient = await initDatabase();
 
   const authRateLimit = authenticationRateLimit();
+  const accountLimit = authenticationRateLimit(15 * 60_000, 20, 10_000, req => (req as any).userId);
+  const adminCredentialLimit = authenticationRateLimit(15 * 60_000, 20, 10_000, req => (req as any).userId);
+  const credentialClientLimit = authenticationRateLimit();
+  const aiLimit = authenticationRateLimit(60 * 60_000, 5, 10_000, req => (req as any).userId);
 
   // Request Auth Middleware
   const requireAuth = async (req: any, res: any, next: any) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-    const token = authHeader.split(" ")[1];
+    const token = sessionToken(req);
+    if (!token) return res.status(401).json({ error: "Unauthorized: No valid session provided" });
     try {
-      const result = await db.query("SELECT * FROM sessions WHERE id = $1", [token]);
+      const result = await db.query("SELECT * FROM sessions WHERE id = $1", [tokenDigest(token)]);
       const session = result.rows[0];
       if (!session) {
         return res.status(401).json({ error: "Unauthorized: Invalid or expired session" });
@@ -92,11 +95,12 @@ async function startServer() {
       const now = new Date().toISOString();
       const expiresAtStr = typeof session.expires_at === "string" ? session.expires_at : new Date(session.expires_at).toISOString();
       if (expiresAtStr < now) {
-        await db.query("DELETE FROM sessions WHERE id = $1", [token]);
+        await db.query("DELETE FROM sessions WHERE id = $1", [tokenDigest(token)]);
         return res.status(401).json({ error: "Unauthorized: Session expired" });
       }
 
       req.userId = session.user_id;
+      req.sessionId = session.id;
       next();
     } catch (err: any) {
       return apiError(res, err);
@@ -135,47 +139,19 @@ async function startServer() {
   });
 
   // Auth API
-  app.post("/api/auth/signup", authRateLimit, async (req, res) => {
-
-    try {
-      const email = normalizeEmail(req.body?.email);
-      const password = validatePassword(req.body?.password);
-      const existingUserResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
-      if (existingUserResult.rows.length > 0) {
-        return res.status(400).json({ error: "User already exists with this email" });
-      }
-
-      const userId = "usr-" + crypto.randomBytes(8).toString("hex");
-      const salt = generateSalt();
-      const passwordHash = await hashPassword(password, salt);
-      const token = generateToken();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-      await db.transaction(async (tx) => {
-      await tx.query(
-        "INSERT INTO users (id, email, password_hash, salt, role) VALUES ($1, $2, $3, $4, $5)",
-        [userId, email, passwordHash, salt, "user"]
-      );
-
-      await tx.query(
-        "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
-        [token, userId, expiresAt]
-      );
-      });
-
-      return res.status(201).json({ token, email });
-    } catch (err: unknown) {
-      return apiError(res, err);
-    }
+  // Accounts are provisioned by administrators, never by an anonymous registration flow.
+  app.post("/api/auth/signup", authRateLimit, (_req, res) => {
+    res.status(403).json({ error: "Accounts must be created by an administrator." });
   });
 
   app.post("/api/auth/login", authRateLimit, async (req, res) => {
     try {
       const email = normalizeEmail(req.body?.email);
-      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      const password = typeof req.body?.password === "string" && req.body.password.length <= 128 ? req.body.password : "";
       const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
       const user = result.rows[0];
       if (!user) {
+        await hashPassword(password || "invalid-password", "timing-padding");
         return res.status(400).json({ error: "Invalid email or password" });
       }
 
@@ -189,26 +165,26 @@ async function startServer() {
 
       // Create Session
       const token = generateToken();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+      const expiresAt = new Date(Date.now() + SESSION_AGE).toISOString(); // Eight-hour absolute expiry
       await db.query(
         "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
-        [token, user.id, expiresAt]
+        [tokenDigest(token), user.id, expiresAt]
       );
 
-      return res.json({ token, email });
+      setSessionCookie(req, res, token);
+      return res.json(req.get("X-Auth-Mode") === "bearer" ? { token, email } : { email });
     } catch (err: unknown) {
       return apiError(res, err);
     }
   });
 
   app.post("/api/auth/logout", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      try {
-        await db.query("DELETE FROM sessions WHERE id = $1", [token]);
-      } catch (error) { return apiError(res, error); }
+    const token = sessionToken(req);
+    if (token) {
+      try { await db.query("DELETE FROM sessions WHERE id = $1", [tokenDigest(token)]); }
+      catch (error) { return apiError(res, error); }
     }
+    setSessionCookie(req, res, null);
     return res.json({ success: true });
   });
 
@@ -225,7 +201,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/change-password", requireAuth, async (req: any, res) => {
+  app.post("/api/auth/change-password", requireAuth, credentialClientLimit, accountLimit, async (req: any, res) => {
     const { oldPassword, newPassword } = req.body ?? {};
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ error: "Current password and new password are required." });
@@ -249,7 +225,7 @@ async function startServer() {
 
       await db.transaction(async (tx) => {
         await tx.query("UPDATE users SET password_hash = $1, salt = $2 WHERE id = $3", [newPasswordHash, newSalt, req.userId]);
-        await tx.query("DELETE FROM sessions WHERE user_id = $1 AND id != $2", [req.userId, req.headers.authorization?.slice(7) || ""]);
+        await tx.query("DELETE FROM sessions WHERE user_id = $1 AND id != $2", [req.userId, req.sessionId]);
       });
 
       return res.json({ success: true, message: "Password changed successfully." });
@@ -673,7 +649,7 @@ async function startServer() {
     }
   });
 
-  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  app.get("/api/admin/users", requireAdmin, adminCredentialLimit, async (req, res) => {
     try {
       const result = await db.query(`
         SELECT u.id, u.email, u.role, u.created_at,
@@ -689,7 +665,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+  app.post("/api/admin/users", requireAdmin, adminCredentialLimit, async (req, res) => {
     try {
       const email = normalizeEmail(req.body?.email);
       const password = validatePassword(req.body?.password);
@@ -721,7 +697,7 @@ async function startServer() {
     }
   });
 
-  app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
+  app.put("/api/admin/users/:id", requireAdmin, adminCredentialLimit, async (req, res) => {
     const { id } = req.params;
     try {
       const email = normalizeEmail(req.body?.email);
@@ -770,7 +746,7 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/admin/users/:id", requireAdmin, async (req: any, res) => {
+  app.delete("/api/admin/users/:id", requireAdmin, adminCredentialLimit, async (req: any, res) => {
     const { id } = req.params;
     if (id === req.userId) {
       return res.status(400).json({ error: "You cannot delete your own admin account" });
@@ -857,7 +833,7 @@ async function startServer() {
   });
 
   // Gemini AI Insights Endpoint
-  app.post("/api/insights/earnings-analysis", requireAuth, async (req: any, res) => {
+  app.post("/api/insights/earnings-analysis", requireAuth, aiLimit, async (req: any, res) => {
     try {
       const result = await db.query('SELECT * FROM income_entries WHERE user_id = $1 ORDER BY "startDate" DESC LIMIT 250', [req.userId]);
       const incomeEntries = result.rows;
@@ -1028,7 +1004,8 @@ Provide a structured analysis in JSON format with:
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.join(process.cwd(), "dist", "public");
+    app.get(/\.(?:cjs|map)$/, (_req, res) => { res.sendStatus(404); });
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
@@ -1037,7 +1014,7 @@ Provide a structured analysis in JSON format with:
 
   app.use(requestErrorHandler);
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, process.env.HOST || "127.0.0.1", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

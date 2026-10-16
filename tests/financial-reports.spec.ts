@@ -1,3 +1,4 @@
+import { createAccount, authenticatePage } from "./browser-auth";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -5,11 +6,7 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
   test.describe(timezoneId, () => {
     test.use({ timezoneId });
     test("reports retain dates, cents, losses, CAD, and the selected planning method", async ({ page, request }) => {
-      const signup = await request.post("/api/auth/signup", { data: {
-        email: `report-${Date.now()}@example.test`, password: "Report-test-password-2026",
-      } });
-      expect(signup.status()).toBe(201);
-      const token = (await signup.json()).token;
+      const token = await createAccount(request, `report-${Date.now()}@example.test`, "Report-test-password-2026");
       const restore = await request.post("/api/restore", { headers: { Authorization: `Bearer ${token}` }, data: {
         schemaVersion: 1,
         income: [{ startDate: "2026-01-01", endDate: "2026-01-01", trips: 1, onlineMinutes: 60, activeMinutes: 30, netFare: 10.25, tips: .5, taxes: 0 }],
@@ -18,7 +15,7 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
         craRates: [{ year: "2026", tier1_threshold: 5000, tier1_rate: .8, tier2_rate: .7 }],
       } });
       expect(restore.status()).toBe(200);
-      await page.addInitScript(value => localStorage.setItem("gig_auth_token", value), token);
+      await authenticatePage(page, token);
       await page.goto("/");
       await page.locator("#tab-tax-trigger").click();
       await expect(page.locator("#planning-method")).toHaveValue("actual");
@@ -51,8 +48,7 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
   test.describe(`period boundaries in ${timezoneId}`, () => {
     test.use({ timezoneId });
     test("quarter/month retain annual tiers, spanning income uses start date, and missing rates are explicit", async ({ page, request }) => {
-      const signup = await request.post("/api/auth/signup", { data: { email: `boundaries-${Date.now()}@example.test`, password: "Boundary-password-2026" } });
-      const token = (await signup.json()).token;
+      const token = await createAccount(request, `boundaries-${Date.now()}@example.test`, "Boundary-password-2026");
       const baseIncome = { trips: 1, onlineMinutes: 60, activeMinutes: 30, tips: 0, taxes: 0 };
       const trip = (date: string, distance: number) => ({ date, startOdometer: 0, endOdometer: distance, purpose: "Delivery", tripType: "Delivery" });
       const restore = await request.post("/api/restore", { headers: { Authorization: `Bearer ${token}` }, data: {
@@ -64,7 +60,7 @@ for (const timezoneId of ["UTC", "America/Toronto", "America/Vancouver"]) {
         craRates: [{ year: "2026", tier1_threshold: 5000, tier1_rate: .8, tier2_rate: .7 }],
       } });
       expect(restore.status()).toBe(200);
-      await page.addInitScript(value => localStorage.setItem("gig_auth_token", value), token);
+      await authenticatePage(page, token);
       await page.goto("/");
       await page.locator("#tab-tax-trigger").click();
       const report = page.locator("#tax-profit-summary-view");

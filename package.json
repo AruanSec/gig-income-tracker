@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && esbuild server.ts scripts/create-admin.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outdir=dist --entry-names=[name] --out-extension:.js=.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "typecheck": "tsc --noEmit",
@@ -13,7 +13,8 @@
     "test": "tsx test_runner.ts && tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "test:api": "tsx --test tests/api.integration.ts",
-    "test:deployment": "node tests/deployment.integration.mjs"
+    "test:deployment": "node tests/deployment.integration.mjs",
+    "test:security": "node tests/security.audit.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

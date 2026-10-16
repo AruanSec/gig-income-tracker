@@ -1,13 +1,11 @@
 /** Save a financial record, propagating failures so the form can retain its draft. */
 export async function saveRecord<T>(resource: string, data: { id?: string }): Promise<T> {
-  const token = localStorage.getItem("gig_auth_token");
-  if (!token) throw new Error("Your session has expired. Sign in again before saving.");
 
   let response: Response;
   try {
     response = await fetch(`/api/${resource}${data.id ? `/${encodeURIComponent(data.id)}` : ""}`, {
       method: data.id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json"},
       body: JSON.stringify(data),
     });
   } catch {

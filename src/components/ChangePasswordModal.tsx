@@ -43,14 +43,12 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     }
 
     setLoading(true);
-    const token = localStorage.getItem("gig_auth_token");
 
     try {
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ oldPassword, newPassword }),
       });

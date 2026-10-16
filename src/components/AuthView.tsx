@@ -1,18 +1,16 @@
 import React, { useState } from "react";
-import { ShieldCheck, Mail, Lock, LogIn, UserPlus, AlertCircle, Sparkles, Sun, Moon } from "lucide-react";
+import { ShieldCheck, Mail, Lock, LogIn, AlertCircle, Sun, Moon } from "lucide-react";
 import { motion } from "motion/react";
 
 interface AuthViewProps {
-  onAuthSuccess: (token: string, email: string) => void;
+  onAuthSuccess: (email: string) => void;
   theme?: "light" | "dark";
   toggleTheme?: () => void;
 }
 
 export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthViewProps) {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,20 +24,10 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
       return;
     }
 
-    if (!isLogin && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (!isLogin && password.length < 10) {
-      setError("Password must be at least 10 characters.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/signup";
+      const endpoint = "/api/auth/login";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -54,7 +42,7 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
         throw new Error(data.error || "Authentication failed.");
       }
 
-      onAuthSuccess(data.token, data.email);
+      onAuthSuccess(data.email);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred. Please try again.");
     } finally {
@@ -85,12 +73,10 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" id="auth-title">
-          {isLogin ? "Sign in to your account" : "Create your account"}
+          Sign in to your account
         </h2>
         <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-          {isLogin 
-            ? "Access your earnings, mileage records, and tax-planning estimates from any device." 
-            : "Sign up to securely sync and calculate your rideshare write-offs."}
+          Access your earnings, mileage records, and tax-planning estimates from any device.
         </p>
       </div>
 
@@ -142,7 +128,7 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete={isLogin ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -152,34 +138,6 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
               </div>
             </div>
 
-            {!isLogin && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-1"
-              >
-                <label htmlFor="confirm-password" className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Confirm Password
-                </label>
-                <div className="mt-1 relative rounded-md shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                  </div>
-                  <input
-                    id="confirm-password"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </motion.div>
-            )}
 
             <div>
               <button
@@ -193,40 +151,14 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                     Processing...
                   </span>
-                ) : isLogin ? (
-                  <>
-                    <LogIn className="h-4 w-4" />
-                    <span>Sign In</span>
-                  </>
                 ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    <span>Create Account</span>
-                  </>
+                  <><LogIn className="h-4 w-4" /><span>Sign In</span></>
                 )}
               </button>
             </div>
           </form>
 
-          <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-6 flex flex-col items-center gap-4">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-              }}
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline transition"
-              id="auth-toggle-btn"
-            >
-              {isLogin ? "New user? Create an account instead" : "Already have an account? Sign in"}
-            </button>
-
-            {!isLogin && (
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-center px-4 leading-relaxed">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Accounts are pre-seeded with sample ride-sharing data for simple evaluation!</span>
-              </p>
-            )}
-          </div>
+          <p className="mt-6 text-center text-sm text-slate-500">Contact your administrator to create an account.</p>
         </motion.div>
       </div>
     </div>
