@@ -1,5 +1,27 @@
 # Test report
 
+## OWASP Top 10 security assessment (2026-10-16 UTC)
+
+See [docs/SECURITY_ASSESSMENT.md](docs/SECURITY_ASSESSMENT.md) for the complete
+OWASP 2025 coverage, 2021 mapping, prioritized findings and reproduction steps.
+The assessment ran the production server and Chromium against disposable PostgreSQL
+on staging `e6ccd1b`: 21 probe groups completed, 14 PASS, 7 GAP, zero errors.
+GAP denotes an observed weakness; a completed diagnostic run is not a security pass.
+Raw sanitized results and the zero-advisory npm audit are committed under
+`docs/security/`. No application security fixes or server deployment were made.
+
+The principal findings are unsafe base Compose defaults (high if deployed without
+the documented protections), reusable database session tokens, unthrottled
+password-change verification, missing security-event auditing and persistent
+browser-readable tokens. Lower-priority findings cover public backend build
+files, cache/CSP policies and signup enumeration. Remediation remains open.
+
+Staging validation passed TypeScript, production build, four original test groups
+and 19 regressions (one PostgreSQL migration test skipped in that command).
+The new security runner used PostgreSQL directly. The browser injection payload
+did not execute; tested access controls, SQL injection defenses, malformed-input
+handling and recovery from an induced database error passed.
+
 ## Clean release-candidate verification (2026-10-16 UTC)
 
 Verified on `staging` at `8c4069cec88cc5317445cd4e9609e6998443fd15`.

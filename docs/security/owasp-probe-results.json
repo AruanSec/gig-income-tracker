@@ -1,0 +1,118 @@
+{
+  "testedAt": "2026-10-16T00:44:03.825Z",
+  "sourceCommit": "e6ccd1b317de4af312508dec73c81925a271d2c0",
+  "environment": {
+    "node": "v22.22.1",
+    "mode": "production",
+    "database": "disposable PostgreSQL 16",
+    "externalAI": "disabled"
+  },
+  "interpretation": "Diagnostic only: GAP means a weakness was observed; exit 0 is not a security clearance.",
+  "results": [
+    {
+      "id": "access-income",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "access-mileage",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "access-expenses",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "admin-authorization-and-role-mass-assignment",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "backup-and-rate-isolation",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "sql-injection-login-and-stored-text",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "malformed-json-and-request-size",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "restore-validation-is-atomic",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "cross-origin-policy-and-form-csrf",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "password-storage-and-token-entropy",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "raw-bearer-token-in-database",
+      "status": "GAP",
+      "detail": "A database-read compromise exposes a directly reusable session token"
+    },
+    {
+      "id": "security-headers-and-private-response-cache",
+      "status": "GAP",
+      "detail": "Missing app headers: content-security-policy, strict-transport-security; authenticated backup Cache-Control: null; HTTPS proxy headers untested"
+    },
+    {
+      "id": "public-backend-bundle-and-source-map",
+      "status": "GAP",
+      "detail": "Unauthenticated backend bundle 200; source map 200; embedded backend source exposed: true"
+    },
+    {
+      "id": "sensitive-project-files-not-served",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "expired-and-revoked-sessions",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "password-change-guessing-limit",
+      "status": "GAP",
+      "detail": "22/22 wrong-current-password requests accepted for verification; 0 rate limited"
+    },
+    {
+      "id": "account-enumeration",
+      "status": "GAP",
+      "detail": "Duplicate signup status 400; existing-account message: User already exists with this email"
+    },
+    {
+      "id": "stored-xss-csv-and-browser-token-storage",
+      "status": "GAP",
+      "detail": "Stored HTML rendered as text without execution; tested category CSV prefixed by fixed label; bearer token is readable by same-origin JavaScript (risk if XSS occurs)"
+    },
+    {
+      "id": "authentication-rate-limit-and-forwarding-spoof",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "database-failure-is-generic-and-recovers",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "security-audit-trail",
+      "status": "GAP",
+      "detail": "Successful admin password reset emitted 0 log characters; source review finds no security event audit sink"
+    }
+  ]
+}
