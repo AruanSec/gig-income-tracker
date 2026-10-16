@@ -1,0 +1,138 @@
+{
+  "testedAt": "2026-10-16T01:07:10.321Z",
+  "sourceCommit": "25c29fe43fbc86f0aa283de021d461f7c48398b9",
+  "environment": {
+    "node": "v22.22.1",
+    "mode": "production",
+    "database": "disposable PostgreSQL 16",
+    "externalAI": "disabled"
+  },
+  "interpretation": "Diagnostic only: GAP means a weakness was observed; exit 0 is not a security clearance.",
+  "results": [
+    {
+      "id": "access-income",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "access-mileage",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "access-expenses",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "admin-authorization-and-role-mass-assignment",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "backup-and-rate-isolation",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "sql-injection-login-and-stored-text",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "malformed-json-and-request-size",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "restore-validation-is-atomic",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "cross-origin-policy-and-form-csrf",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "password-storage-and-token-entropy",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "raw-bearer-token-in-database",
+      "status": "PASS",
+      "detail": "Only SHA-256 session digests persisted; replaying a database value is rejected"
+    },
+    {
+      "id": "security-headers-and-private-response-cache",
+      "status": "PASS",
+      "detail": "CSP present: true; authenticated backup Cache-Control: no-store; HSTS requires HTTPS and is checked with trusted-proxy fixtures"
+    },
+    {
+      "id": "public-backend-bundle-and-source-map",
+      "status": "PASS",
+      "detail": "Unauthenticated backend bundle 404; source map 404; embedded backend source exposed: false"
+    },
+    {
+      "id": "sensitive-project-files-not-served",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "expired-and-revoked-sessions",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "cookie-login-and-csrf",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "password-change-guessing-limit",
+      "status": "PASS",
+      "detail": "20/22 wrong-current-password requests accepted for verification; 2 rate limited"
+    },
+    {
+      "id": "account-enumeration",
+      "status": "PASS",
+      "detail": "Public signup is disabled with the same response for existing and unknown addresses"
+    },
+    {
+      "id": "stored-xss-csv-and-browser-token-storage",
+      "status": "PASS",
+      "detail": "Stored HTML remained text; tested category CSV prefixed; browser session cookie is HttpOnly and no token is in localStorage"
+    },
+    {
+      "id": "weak-legacy-password-requires-reset",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "authentication-rate-limit-and-forwarding-spoof",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "database-failure-is-generic-and-recovers",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "security-audit-trail",
+      "status": "PASS",
+      "detail": "Successful admin password reset emitted 177 log characters; structured event excludes the supplied password"
+    },
+    {
+      "id": "private-compose-and-required-credentials",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    },
+    {
+      "id": "hsts-behind-explicit-trusted-proxy",
+      "status": "PASS",
+      "detail": "Expected security control observed"
+    }
+  ]
+}
