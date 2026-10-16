@@ -12,9 +12,9 @@ export async function hashPassword(password: string, salt: string): Promise<stri
 }
 
 export async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
-  const candidate = storedHash.startsWith("scrypt$")
-    ? await hashPassword(password, salt)
-    : crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+  // Legacy PBKDF2 hashes require an administrator reset; do not keep weak credentials usable.
+  if (!storedHash.startsWith("scrypt$")) return false;
+  const candidate = await hashPassword(password, salt);
   const left = Buffer.from(candidate);
   const right = Buffer.from(storedHash);
   return left.length === right.length && crypto.timingSafeEqual(left, right);

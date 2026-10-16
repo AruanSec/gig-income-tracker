@@ -20,6 +20,7 @@ function getGenAI(): GoogleGenAI {
     genAIClient = new GoogleGenAI({
       apiKey,
       httpOptions: {
+        timeout: 15000,
         headers: {
           "User-Agent": "aistudio-build",
         },
@@ -148,6 +149,7 @@ async function startServer() {
     try {
       const email = normalizeEmail(req.body?.email);
       const password = typeof req.body?.password === "string" && req.body.password.length <= 128 ? req.body.password : "";
+      if (!password) return res.status(400).json({ error: "Invalid email or password" });
       const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
       const user = result.rows[0];
       if (!user) {
@@ -157,10 +159,6 @@ async function startServer() {
 
       if (!password || !(await verifyPassword(password, user.salt, user.password_hash))) {
         return res.status(400).json({ error: "Invalid email or password" });
-      }
-
-      if (!user.password_hash.startsWith("scrypt$")) {
-        await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [await hashPassword(password, user.salt), user.id]);
       }
 
       // Create Session
@@ -208,7 +206,7 @@ async function startServer() {
     }
 
     try {
-      if (typeof oldPassword !== "string") throw new ValidationError("Current password must be a string.");
+      if (typeof oldPassword !== "string" || oldPassword.length > 128) throw new ValidationError("Current password must be a string.");
       validatePassword(newPassword);
       const result = await db.query("SELECT * FROM users WHERE id = $1", [req.userId]);
       const user = result.rows[0];
@@ -848,7 +846,7 @@ async function startServer() {
           const activeHours = (e.activeMinutes || 0) / 60;
           const hourlyRate = onlineHours > 0 ? (e.totalEarnings / onlineHours).toFixed(2) : "N/A";
           const tipPct = e.totalEarnings > 0 ? ((e.tips / e.totalEarnings) * 100).toFixed(1) : "0";
-          return `Entry ${index + 1}: Date Range: ${e.startDate} to ${e.endDate} | Total Earnings: $${e.totalEarnings} (Net Fare: $${e.netFare}, Tips: $${e.tips}, Tips%: ${tipPct}%) | Trips: ${e.trips} | Online Hours: ${onlineHours.toFixed(1)}h | Active Hours: ${activeHours.toFixed(1)}h | Effective Hourly Rate: $${hourlyRate}/hr | Notes: "${e.notes || "None"}"`;
+          return `Entry ${index + 1}: Date Range: ${e.startDate} to ${e.endDate} | Total Earnings: $${e.totalEarnings} (Net Fare: $${e.netFare}, Tips: $${e.tips}, Tips%: ${tipPct}%) | Trips: ${e.trips} | Online Hours: ${onlineHours.toFixed(1)}h | Active Hours: ${activeHours.toFixed(1)}h | Effective Hourly Rate: $${hourlyRate}/hr`;
         })
         .join("\n");
 
@@ -976,6 +974,7 @@ Provide a structured analysis in JSON format with:
           responseMimeType: "application/json",
           responseSchema: responseSchema,
           temperature: 0.7,
+          maxOutputTokens: 2048,
         },
       });
 

@@ -48,7 +48,7 @@ cd ~/apps/gig-income-tracker
 docker compose version
 ```
 
-If uploading files, include `package-lock.json`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `index.html`, the build configuration, `server.ts`, and `src/`. Exclude local `node_modules`, `dist`, database files, and secrets. Node.js does not need to be installed on the host for this deployment.
+If uploading files, include `package-lock.json`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `index.html`, the build configuration, `server.ts`, and `src/` plus `scripts/`. Exclude local `node_modules`, `dist`, database files, and secrets. Node.js does not need to be installed on the host for this deployment.
 
 ### 2. Configure credentials
 
@@ -59,15 +59,16 @@ umask 077
 cat > ../gig-income-tracker.env <<EOF
 POSTGRES_USER=gig_tracker
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
+APP_DATABASE_PASSWORD=$(openssl rand -hex 32)
 POSTGRES_DB=tax_mileage_db
 GEMINI_API_KEY=
 EOF
 chmod 600 ../gig-income-tracker.env
 ```
 
-Run this step once for a new deployment. Keep the file for later restarts and upgrades. Hexadecimal passwords work directly in the connection URL assembled by Compose. Changing `POSTGRES_PASSWORD` after PostgreSQL has initialized does not change the database user's password; rotate it in PostgreSQL and update the file together.
+Run this step once for a new deployment. Keep the file for later restarts and upgrades. Compose requires both passwords and gives the app its own non-superuser `gig_app` role; the PostgreSQL administrator password is not passed to the application. Hexadecimal passwords work directly in the connection URL assembled by Compose. Changing `POSTGRES_PASSWORD` after PostgreSQL has initialized does not change the database user's password; rotate it in PostgreSQL and update the file together.
 
-Leave `GEMINI_API_KEY` empty to use local statistical insights, or set a real key to enable external AI analysis. The application sends income information, including notes, to Gemini when that analysis runs.
+Leave `GEMINI_API_KEY` empty to use local statistical insights, or set a real key to enable external AI analysis. The application sends income information, excluding free-text notes, to Gemini when that analysis runs.
 
 Compose reads this file through `--env-file` and supplies the application with `DATABASE_URL`, `NODE_ENV=production`, and `PORT=3000`. Keep credentials out of source control and the project directory. The Docker build context excludes `.env*` (except `.env.example`), `.npmrc`, and database dumps.
 
@@ -84,7 +85,7 @@ services:
       - "127.0.0.1:3000:3000"
 ```
 
-The base Compose file publishes both ports on all interfaces. This override removes PostgreSQL's published port and restricts the application to the host's loopback interface. Containers still reach PostgreSQL over the private Compose network.
+The base Compose file already keeps PostgreSQL unpublished and binds the app to loopback. This explicit server override preserves those defaults when composing additional configuration. Containers still reach PostgreSQL over the private Compose network.
 
 Define this shell helper in each new SSH session, after changing to `~/apps/gig-income-tracker`. Use it for all server operations so the environment file and port override are always applied:
 
@@ -154,7 +155,17 @@ sudo systemctl reload caddy
 curl --fail https://tracker.example.com/api/health
 ```
 
-Caddy obtains and renews the TLS certificate and redirects HTTP to HTTPS. Its certificate setup requires correct DNS and inbound access to ports 80/443. Open `https://tracker.example.com` and create an account. New accounts start with empty financial ledgers. Use the explicit sample-data action only for demonstrations; it replaces that account's entries. See [TEST_REPORT.md](TEST_REPORT.md) for the current functional findings.
+Caddy obtains and renews the TLS certificate and redirects HTTP to HTTPS. Its certificate setup requires correct DNS and inbound access to ports 80/443. Open `https://tracker.example.com` and sign in using an administrator-created account. Public signup is disabled. To provision the first administrator, run the command below after starting the app:
+
+```bash
+read -r -p "Administrator email: " tracker_admin_email
+IFS= read -r -s -p "Administrator password (10–128 characters): " tracker_admin_password
+printf '\n'
+printf '%s\n%s\n' "$tracker_admin_email" "$tracker_admin_password" | dc exec -T tax-mileage-app node dist/create-admin.cjs
+unset tracker_admin_email tracker_admin_password
+```
+
+The command reads credentials from standard input and refuses to overwrite an existing account. Use the admin portal to create subsequent accounts. New accounts start with empty financial ledgers. Use the explicit sample-data action only for demonstrations; it replaces that account's entries. See [TEST_REPORT.md](TEST_REPORT.md) for the current functional findings.
 
 ### Back up and restore PostgreSQL
 
@@ -175,7 +186,7 @@ To replace this deployment's data with a known backup, set its path and stop the
 ```bash
 backup_file=../gig-income-tracker-backups/database-YYYYMMDDTHHMMSSZ.dump
 dc stop tax-mileage-app
-dc exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error' < "$backup_file"
+dc exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --role=gig_app --single-transaction --exit-on-error' < "$backup_file"
 # Continue only after pg_restore succeeds.
 dc start tax-mileage-app
 curl --fail https://tracker.example.com/api/health
@@ -183,7 +194,7 @@ curl --fail https://tracker.example.com/api/health
 
 ### Update or stop the application
 
-Back up the database before each update. For a Git checkout, fetch and select the release you intend to deploy; for an uploaded project, upload the new source while preserving `compose.server.yml` and the external environment file.
+Back up the database before each update. Existing deployments upgrading from the previous shared database role must first follow [the security upgrade guide](docs/SECURITY_UPGRADE.md). For a Git checkout, fetch and select the release you intend to deploy; for an uploaded project, upload the new source while preserving `compose.server.yml` and the external environment file.
 
 ```bash
 git fetch --tags origin
@@ -247,9 +258,11 @@ Compose deployment uses the external environment file described above. For direc
 | `NODE_ENV` | Unset | Set to `production` to serve the built app and require PostgreSQL |
 | `DATABASE_URL` | — | PostgreSQL connection URL; required for production |
 | `POSTGRES_USER` | `postgres` in Compose | Database user; set explicitly for server deployment |
-| `POSTGRES_PASSWORD` | `postgres` in Compose | Set a strong password before the first startup |
+| `POSTGRES_PASSWORD` | Required in Compose | PostgreSQL administrator password; never given to the app |
+| `APP_DATABASE_PASSWORD` | Required in Compose | Separate password for the restricted `gig_app` role; hexadecimal recommended |
 | `POSTGRES_DB` | `tax_mileage_db` | Database name |
 | `POSTGRES_HOST` / `POSTGRES_PORT` | Host-dependent / `5432` | Alternative database connection configuration; Compose supplies these |
+| `HOST` | `127.0.0.1`; `0.0.0.0` in Compose | Listen interface; keep direct host execution private |
 | `TRUST_PROXY` | Empty (forwarded headers ignored) | Comma-separated trusted proxy IP addresses/CIDRs; configure for the actual topology |
 | `DB_PATH` | `database.db` | Development-only SQLite fallback path |
 | `GEMINI_API_KEY` | — | Optional; enables external AI insights |
@@ -280,7 +293,7 @@ Compose deployment uses the external environment file described above. For direc
 Run `npm test`, `npm run typecheck`, and `npm run build` for the standard checks.
 For browser regression tests, install Chromium once with
 `npx playwright install --with-deps chromium`, then run `npm run test:e2e`.
-The browser suite starts its own server on port 4173 with an in-memory SQLite
+The browser suite provisions a disposable administrator and starts its own server on port 4173 with a temporary SQLite
 database and external AI disabled. Keep that port free. It checks financial-form
 save failures, retained drafts, retries, repeated submissions, and failed edits.
 It also checks CAD reports, year boundaries, losses, and planning-method changes
@@ -321,3 +334,32 @@ Operators still need to schedule dumps, encrypt and copy them off-server, set a
 retention policy, monitor failures and periodically restore into a separate
 non-production database. Server DNS, HTTPS, reboot and rollback checks must be
 performed on the intended host before release.
+
+
+## Security controls and regression
+
+See [the security upgrade guide](docs/SECURITY_UPGRADE.md) before upgrading an existing server.
+Browser sessions use HttpOnly, SameSite=Strict cookies, with Secure required in production;
+production browser access therefore requires HTTPS (loopback is used only by local tests).
+New sessions expire after eight hours. Startup hashes legacy session IDs transactionally;
+browser tokens previously stored in localStorage are removed and users must sign in again.
+Legacy PBKDF2 passwords require an administrator reset. API clients can request a bearer
+token at login with `X-Auth-Mode: bearer`; the UI never requests or persists one.
+Cookie-authenticated writes require a matching Origin. Configure the actual trusted proxy
+so HTTPS origin checks and HSTS work behind Caddy.
+
+Run `npm run test:security` after building, with Docker and Chromium available. It creates
+its own PostgreSQL container and tests production-mode controls; any GAP or ERROR fails
+the command. Results default to `/tmp/gig-security-results.json`. CI runs this check and
+an npm advisory audit. See [the original assessment](docs/SECURITY_ASSESSMENT.md) for scope
+and historical findings; recorded remediation evidence is in [TEST_REPORT.md](TEST_REPORT.md).
+
+Structured security events go to stdout without passwords, session tokens or financial
+notes. Compose rotates local app logs (five 10 MB files). Configure off-host retention,
+access control and alerts for repeated authentication failures, CSRF denials and admin
+credential changes on your intended server; local rotation does not provide alert delivery.
+Images and Actions are pinned; review advisory results and update pins deliberately.
+The optional external AI call excludes free-text notes, has a 15-second request timeout,
+a bounded output, and a per-account five-request/hour limit. Credential changes have
+per-account limits, and password changes also have a client-IP limit. Limits are per
+process; multiple app instances need shared state.

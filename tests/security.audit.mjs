@@ -97,6 +97,7 @@ try {
   }
   await check('admin-authorization-and-role-mass-assignment', async () => {
     assert.equal((await request('GET', '/api/auth/me', undefined, token)).body.role, 'user');
+    assert.equal((await request('POST', '/api/auth/signup', { email: 'forged-admin@example.test', password, role: 'admin' })).status, 403);
     for (const endpoint of ['/api/admin/users', '/api/admin/stats', '/api/admin/data/income', '/api/admin/data/mileage', '/api/admin/data/expenses']) {
       assert.equal((await request('GET', endpoint, undefined, token)).status, 403);
     }
@@ -225,6 +226,11 @@ try {
     assert.ok(cookie?.httpOnly && cookie.secure && cookie.sameSite === 'Strict');
     await context.close();
     return { detail: 'Stored HTML remained text; tested category CSV prefixed; browser session cookie is HttpOnly and no token is in localStorage' };
+  });
+  await check('weak-legacy-password-requires-reset', async () => {
+    const legacy = crypto.pbkdf2Sync(password, other.salt, 1000, 64, 'sha512').toString('hex');
+    await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [legacy, other.id]);
+    assert.equal((await request('POST', '/api/auth/login', { email: other.email, password })).status, 400);
   });
   await check('authentication-rate-limit-and-forwarding-spoof', async () => {
     let last;

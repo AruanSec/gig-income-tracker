@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { provisionAdmin, adminEmail, adminPassword } from "./provision.mjs";
+import { provisionAdmin, adminPassword } from "./provision.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -23,7 +23,8 @@ test("financial API regressions", { timeout: 180_000 }, async t => {
   const url = process.env.TEST_DATABASE_URL;
   const appEnv = { ...process.env, NODE_ENV: url ? "production" : "development", DISABLE_HMR: "true", PORT: String(port),
     DATABASE_URL: url || "postgresql://test:test@127.0.0.1:1/test", DB_PATH: dbPath, GEMINI_API_KEY: "" };
-  provisionAdmin(appEnv, Boolean(url));
+  const adminEmail = `api-admin-${Date.now()}@example.test`;
+  provisionAdmin(appEnv, Boolean(url), adminEmail);
   const legacyToken = crypto.randomBytes(32).toString("hex");
   const legacyDigest = `sha256$${crypto.createHash("sha256").update(legacyToken).digest("hex")}`;
   if (url) {
