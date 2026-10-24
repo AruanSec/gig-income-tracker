@@ -21,8 +21,6 @@ export default function CraRatesModal({ isOpen, onClose, rates, onSave }: CraRat
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
-
   const resetForm = () => {
     setEditingYear(null);
     setYearInput("");
@@ -119,6 +117,8 @@ export default function CraRatesModal({ isOpen, onClose, rates, onSave }: CraRat
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [editingYear]);
+
+  if (!isOpen) return null;
 
   return (
     <div 

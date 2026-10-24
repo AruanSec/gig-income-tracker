@@ -4,11 +4,11 @@ import { addMoney, sumMoney } from "./money";
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { PlusCircle, RefreshCw, HelpCircle, TrendingUp, Landmark, ShieldCheck, DollarSign, LogOut, Car, Route, Download, Upload, Database, Sun, Moon, Trash2, Beaker, Settings, Lock, Calculator } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-import { saveRecord } from "./api";
+import { ApiError, deleteRecord, fetchJson, saveRecord } from "./api";
 import { IncomeEntry, MileageEntry, VehicleExpense, CraRate } from "./types";
 import { INITIAL_INCOME_ENTRIES, INITIAL_MILEAGE_ENTRIES, INITIAL_VEHICLE_EXPENSES } from "./data/mockData";
 import { calculateStats, formatCurrency, calculateMileageStats, missingRateYears } from "./utils";
@@ -24,15 +24,22 @@ import VehicleExpenseForm from "./components/VehicleExpenseForm";
 import VehicleExpenseList from "./components/VehicleExpenseList";
 import ExpenseCategoryPieChart from "./components/ExpenseCategoryPieChart";
 import CombinedDeductionsView from "./components/CombinedDeductionsView";
-import TaxProfitSummary from "./components/TaxProfitSummary";
 import TaxDeductionCalculatorModal from "./components/TaxDeductionCalculatorModal";
-import EarningsAIInsights from "./components/EarningsAIInsights";
 import WeeklyComparisonChart from "./components/WeeklyComparisonChart";
 import AuthView from "./components/AuthView";
 import CraRatesModal from "./components/CraRatesModal";
 import DateRangePicker from "./components/DateRangePicker";
 import ChangePasswordModal from "./components/ChangePasswordModal";
-import AdminPortal from "./components/AdminPortal";
+
+const TaxProfitSummary = lazy(() => import("./components/TaxProfitSummary"));
+const EarningsAIInsights = lazy(() => import("./components/EarningsAIInsights"));
+const AdminPortal = lazy(() => import("./components/AdminPortal"));
+
+const DeferredViewFallback = () => (
+  <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+    Loading view…
+  </div>
+);
 
 export default function App() {
   // Theme state
@@ -58,6 +65,7 @@ export default function App() {
   const [userRole, setUserRole] = useState<string>("user");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null means loading check
   const [loadingData, setLoadingData] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   // Core Data States
   const [entries, setEntries] = useState<IncomeEntry[]>([]);
@@ -117,28 +125,21 @@ export default function App() {
   // Fetch full data set when authenticated
   const fetchData = async () => {
     setLoadingData(true);
+    setDataError(null);
     try {
-      const [incomeRes, mileageRes, expensesRes, ratesRes] = await Promise.all([
-        fetch("/api/income"),
-        fetch("/api/mileage"),
-        fetch("/api/expenses"),
-        fetch("/api/settings/cra-rates")
+      const [incomeData, mileageData, expensesData, ratesData] = await Promise.all([
+        fetchJson<IncomeEntry[]>("/api/income"),
+        fetchJson<MileageEntry[]>("/api/mileage"),
+        fetchJson<VehicleExpense[]>("/api/expenses"),
+        fetchJson<CraRate[]>("/api/settings/cra-rates")
       ]);
-
-      if (incomeRes.ok && mileageRes.ok && expensesRes.ok && ratesRes.ok) {
-        const [incomeData, mileageData, expensesData, ratesData] = await Promise.all([
-          incomeRes.json(),
-          mileageRes.json(),
-          expensesRes.json(),
-          ratesRes.json()
-        ]);
-        setEntries(incomeData);
-        setMileageEntries(mileageData);
-        setVehicleExpenses(expensesData);
-        setCraRates(ratesData);
-      }
-    } catch (e) {
-      console.error("Failed to load user data", e);
+      setEntries(incomeData);
+      setMileageEntries(mileageData);
+      setVehicleExpenses(expensesData);
+      setCraRates(ratesData);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) setIsAuthenticated(false);
+      setDataError(error instanceof Error ? error.message : "Unable to load your records.");
     } finally {
       setLoadingData(false);
     }
@@ -225,15 +226,9 @@ export default function App() {
     if (confirm("Are you sure you want to delete this shift entry? This cannot be undone.")) {
 
       try {
-        const res = await fetch(`/api/income/${id}`, {
-          method: "DELETE"
-        });
-        if (res.ok) {
-          setEntries((prev) => prev.filter((item) => item.id !== id));
-        }
-      } catch (e) {
-        console.error("Failed to delete income entry", e);
-      }
+        await deleteRecord("income", id);
+        setEntries((prev) => prev.filter((item) => item.id !== id));
+      } catch (error) { setDataError(error instanceof Error ? error.message : "Unable to delete the income entry."); }
     }
   };
 
@@ -282,15 +277,9 @@ export default function App() {
     if (confirm("Are you sure you want to delete this business trip? This cannot be undone.")) {
 
       try {
-        const res = await fetch(`/api/mileage/${id}`, {
-          method: "DELETE"
-        });
-        if (res.ok) {
-          setMileageEntries((prev) => prev.filter((item) => item.id !== id));
-        }
-      } catch (e) {
-        console.error("Failed to delete mileage entry", e);
-      }
+        await deleteRecord("mileage", id);
+        setMileageEntries((prev) => prev.filter((item) => item.id !== id));
+      } catch (error) { setDataError(error instanceof Error ? error.message : "Unable to delete the mileage entry."); }
     }
   };
 
@@ -321,15 +310,9 @@ export default function App() {
     if (confirm("Are you sure you want to delete this vehicle expense? This cannot be undone.")) {
 
       try {
-        const res = await fetch(`/api/expenses/${id}`, {
-          method: "DELETE"
-        });
-        if (res.ok) {
-          setVehicleExpenses((prev) => prev.filter((item) => item.id !== id));
-        }
-      } catch (e) {
-        console.error("Failed to delete expense entry", e);
-      }
+        await deleteRecord("expenses", id);
+        setVehicleExpenses((prev) => prev.filter((item) => item.id !== id));
+      } catch (error) { setDataError(error instanceof Error ? error.message : "Unable to delete the expense."); }
     }
   };
 
@@ -740,6 +723,14 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" id="app-main">
+        {dataError && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+            <span>{dataError}</span>
+            <button type="button" onClick={() => void fetchData()} disabled={loadingData} className="font-bold underline disabled:opacity-50">
+              {loadingData ? "Retrying…" : "Retry"}
+            </button>
+          </div>
+        )}
         {missingRateYears(mileageEntries, craRates).length > 0 && (
           <div role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-950">
             Incomplete mileage estimate: configure verified planning rates for {missingRateYears(mileageEntries, craRates).join(", ")} in CRA Rates. Trips from these years are excluded from estimates; rates are never borrowed from another year.
@@ -860,7 +851,7 @@ export default function App() {
 
               {/* Gemini AI Earnings Trends & Suggestions Analysis */}
               <section aria-label="Gemini AI Earnings Analysis">
-                <EarningsAIInsights entries={entries} />
+                <Suspense fallback={<DeferredViewFallback />}><EarningsAIInsights entries={entries} /></Suspense>
               </section>
 
               {/* 2. Monthly Income Aggregation Bar Chart */}
@@ -1035,12 +1026,12 @@ export default function App() {
               className="space-y-6"
               id="tax-tab-view"
             >
-              <TaxProfitSummary
+              <Suspense fallback={<DeferredViewFallback />}><TaxProfitSummary
                 entries={entries}
                 mileageEntries={mileageEntries}
                 expenses={vehicleExpenses}
                 craRates={craRates}
-              />
+              /></Suspense>
             </motion.div>
           )}
 
@@ -1054,7 +1045,7 @@ export default function App() {
               className="space-y-6"
               id="admin-tab-view"
             >
-              <AdminPortal />
+              <Suspense fallback={<DeferredViewFallback />}><AdminPortal /></Suspense>
             </motion.div>
           )}
         </AnimatePresence>

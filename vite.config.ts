@@ -5,7 +5,19 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    build: { outDir: "dist/public" },
+    build: {
+      outDir: "dist/public",
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            charts: ["recharts"],
+            motion: ["motion"],
+            icons: ["lucide-react"],
+            dragAndDrop: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+          },
+        },
+      },
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
