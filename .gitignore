@@ -8,3 +8,7 @@ coverage/
 !.env.example
 playwright-report/
 test-results/
+database.db
+*.db-wal
+*.db-shm
+*.db-journal

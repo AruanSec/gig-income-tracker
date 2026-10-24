@@ -90,9 +90,10 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
         return entry.totalEarnings;
       case "trips":
         return entry.trips;
-      case "efficiency":
+      case "efficiency": {
         const hours = entry.onlineMinutes / 60;
         return hours > 0 ? parseFloat((entry.totalEarnings / hours).toFixed(2)) : 0;
+      }
       default:
         return entry.totalEarnings;
     }
@@ -104,9 +105,10 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
         return item.totalEarnings;
       case "trips":
         return item.trips;
-      case "efficiency":
+      case "efficiency": {
         const hours = item.onlineMinutes / 60;
         return hours > 0 ? parseFloat((item.totalEarnings / hours).toFixed(2)) : 0;
+      }
       default:
         return item.totalEarnings;
     }
@@ -418,4 +420,3 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
     </div>
   );
 }
-
