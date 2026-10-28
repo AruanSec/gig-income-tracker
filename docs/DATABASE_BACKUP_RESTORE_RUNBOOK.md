@@ -55,21 +55,18 @@ must cover both database dumps and any exported reports or receipts stored elsew
 
 ## Prerequisites
 
-Run commands from the project directory. Define the same Compose wrapper used by
-the deployment, replacing the environment-file location when necessary:
+Run commands from the project directory. The included `./dc.sh` uses the external
+environment file and server Compose settings described in the README:
 
 ```bash
-dc() {
-  docker compose --env-file ../gig-income-tracker.env \
-    -f docker-compose.yml -f compose.server.yml "$@"
-}
+./dc.sh config --quiet
 ```
 
 Confirm the deployment and database are healthy before a routine backup:
 
 ```bash
-dc ps
-dc exec -T postgres sh -c \
+./dc.sh ps
+./dc.sh exec -T postgres sh -c \
   'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
@@ -136,7 +133,7 @@ encrypted_dump="$plain_dump.age"
 backup_recipient='age1REPLACE_WITH_BACKUP_RECOVERY_RECIPIENT'
 
 install -d -m 0700 "$backup_dir"
-dc exec -T postgres sh -c \
+./dc.sh exec -T postgres sh -c \
   'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$plain_dump"
 test -s "$plain_dump"
 pg_restore --list "$plain_dump" >/dev/null
@@ -153,7 +150,7 @@ is to stream the dump directly into age so plaintext never reaches persistent di
 ```bash
 set -o pipefail
 umask 077
-dc exec -T postgres sh -c \
+./dc.sh exec -T postgres sh -c \
   'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   | age --recipient "$backup_recipient" \
       --output "/srv/backups/gig-income-tracker/database-$(date -u +%Y%m%dT%H%M%SZ).dump.age"
@@ -207,9 +204,9 @@ Run it at least quarterly and after changing the backup automation.
 4. Create a separate database and make the application role own its public schema:
 
    ```bash
-   dc exec -T postgres sh -c \
+   ./dc.sh exec -T postgres sh -c \
      'createdb -U "$POSTGRES_USER" gig_income_recovery'
-   dc exec -T postgres sh -c \
+   ./dc.sh exec -T postgres sh -c \
      'psql -U "$POSTGRES_USER" -d gig_income_recovery -v ON_ERROR_STOP=1 \
        -c "ALTER SCHEMA public OWNER TO gig_app"'
    ```
@@ -217,7 +214,7 @@ Run it at least quarterly and after changing the backup automation.
 5. Restore with ownership and privilege controls:
 
    ```bash
-   dc exec -T postgres sh -c \
+   ./dc.sh exec -T postgres sh -c \
      'pg_restore -U "$POSTGRES_USER" -d gig_income_recovery \
        --no-owner --no-privileges --role=gig_app \
        --single-transaction --exit-on-error' < "$recovery_dump"
@@ -246,15 +243,15 @@ age --decrypt --identity /secure/offline/backup-age-key.txt \
   --output "$recovery_dump" "$encrypted_dump"
 pg_restore --list "$recovery_dump" >/dev/null
 
-dc stop tax-mileage-app
-dc exec -T postgres sh -c \
+./dc.sh stop tax-mileage-app
+./dc.sh exec -T postgres sh -c \
   'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
     --clean --if-exists --no-owner --no-privileges --role=gig_app \
     --single-transaction --exit-on-error' < "$recovery_dump"
 
 rm -f "$recovery_dump"
-dc start tax-mileage-app
-dc ps
+./dc.sh start tax-mileage-app
+./dc.sh ps
 curl --fail https://your-server.your-tailnet.ts.net/api/health
 ```
 

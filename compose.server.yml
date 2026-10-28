@@ -1,0 +1,6 @@
+services:
+  postgres:
+    ports: !reset []
+  tax-mileage-app:
+    ports: !override
+      - "127.0.0.1:3000:3000"

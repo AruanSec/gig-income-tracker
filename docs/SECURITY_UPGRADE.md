@@ -2,7 +2,7 @@
 
 Back up PostgreSQL and keep the previous release and environment file before upgrading.
 These are operator commands for the intended server; repository testing does not execute
-them against a live deployment. Use the `dc` helper and protected external environment
+them against a live deployment. Use the `./dc.sh` helper and protected external environment
 file described in [README.md](../README.md).
 
 ## Database role migration
@@ -11,7 +11,7 @@ New volumes initialize `gig_app` as a non-superuser that owns the application sc
 and tables. Existing volumes do not rerun PostgreSQL initialization scripts. Before
 starting the upgraded app against an existing volume:
 
-1. Stop the app with `dc stop tax-mileage-app` and take a successful database dump.
+1. Stop the app with `./dc.sh stop tax-mileage-app` and take a successful database dump.
 2. Add `APP_DATABASE_PASSWORD` to the external environment file using a different,
    securely generated hexadecimal password. Preserve the administrator credentials.
 3. Check out the upgraded source, including `scripts/init-app-db.sh`.
@@ -20,11 +20,11 @@ starting the upgraded app against an existing volume:
    ownership. Do not use `down -v`.
 
 ```bash
-dc config --quiet
-dc up -d --wait postgres
-dc exec -T postgres sh /docker-entrypoint-initdb.d/10-app-user.sh
-dc up -d --build tax-mileage-app
-dc ps
+./dc.sh config --quiet
+./dc.sh up -d --wait postgres
+./dc.sh exec -T postgres sh /docker-entrypoint-initdb.d/10-app-user.sh
+./dc.sh up -d --build tax-mileage-app
+./dc.sh ps
 curl --fail https://tracker.example.com/api/health
 ```
 
@@ -37,7 +37,7 @@ schema requirements must review these SQL grants before applying them.
 Verify application role flags without printing credentials:
 
 ```bash
-dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT rolname, rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname = '\''gig_app'\''"'
+./dc.sh exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT rolname, rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname = '\''gig_app'\''"'
 ```
 
 All three privilege flags should be `f`. The base Compose file now publishes no
@@ -53,7 +53,7 @@ the admin portal. If no usable administrator exists, provision a new one locally
 read -r -p "Administrator email: " tracker_admin_email
 IFS= read -r -s -p "Administrator password: " tracker_admin_password
 printf '\n'
-printf '%s\n%s\n' "$tracker_admin_email" "$tracker_admin_password" | dc exec -T tax-mileage-app node dist/create-admin.cjs
+printf '%s\n%s\n' "$tracker_admin_email" "$tracker_admin_password" | ./dc.sh exec -T tax-mileage-app node dist/create-admin.cjs
 unset tracker_admin_email tracker_admin_password
 ```
 

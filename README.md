@@ -27,31 +27,30 @@ A full-stack web application designed for Canadian gig workers (Uber, Lyft, Door
 
 ## Deploy to a Linux server
 
-The recommended deployment runs the application and PostgreSQL with Docker Compose, with Tailscale Serve on the host providing HTTPS. The multi-stage Dockerfile uses Node 22 and runs the application as the unprivileged `node` user. PostgreSQL data lives in the `postgres_data` Docker volume; SQLite is a development fallback only.
+Run the application and PostgreSQL with Docker Compose, then use Tailscale Serve for private HTTPS access. Run the commands below on the server, from the project directory. `./dc.sh` is the included shortcut for Docker Compose; it always uses the server port settings and the credentials file beside the project directory.
 
-### 1. Prepare the server and source code
+### 1. Prepare the server
 
-These instructions assume an Ubuntu or Debian server, a user with SSH and sudo access, and Tailscale installed on the same host as Docker. Access uses the server's HTTPS `*.ts.net` name. Replace repository and hostname placeholders with your own values.
+You need an Ubuntu or Debian server, SSH and sudo access, and a device on the same Tailscale tailnet. Install Docker and Tailscale on the server:
 
-- Install [Docker Engine and the Compose plugin](https://docs.docker.com/engine/install/). Use Docker Compose **2.24.4 or newer**; the server override below uses `!override` and `!reset`.
+- Install [Docker Engine and the Compose plugin](https://docs.docker.com/engine/install/). Use Docker Compose **2.24.4 or newer**.
 - Install [Tailscale](https://tailscale.com/download/linux), connect the server to your tailnet with `sudo tailscale up`, and confirm it appears in `tailscale status`.
 - Enable MagicDNS and HTTPS certificates in the tailnet DNS settings if needed. Client devices must join the tailnet and have permission to reach the service under its access rules.
-- Preserve your SSH access. This private Serve deployment needs no public domain records or public inbound ports 80, 443, 3000 or 5432. Tailscale handles connectivity through its own networking.
+- Keep SSH access available. You do not need a public domain or public inbound ports for the app or database.
 - Enable Docker at boot: `sudo systemctl enable --now docker`. Run the commands below as a user authorized to use Docker.
 
-Copy the project source to `~/apps/gig-income-tracker`, or clone your repository:
+Clone the project:
 
 ```bash
 mkdir -p ~/apps
-# Replace YOUR_REPOSITORY_URL with the repository containing this project.
-git clone YOUR_REPOSITORY_URL ~/apps/gig-income-tracker
+git clone https://github.com/AruanSec/gig-income-tracker.git ~/apps/gig-income-tracker
 cd ~/apps/gig-income-tracker
 docker compose version
 ```
 
-If uploading files, include `package-lock.json`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `index.html`, the build configuration, `server.ts`, and `src/` plus `scripts/`. Exclude local `node_modules`, `dist`, database files, and secrets. Node.js does not need to be installed on the host for this deployment.
+Node.js is not needed on the host. If you upload files instead of cloning, include the complete repository except local `node_modules`, `dist`, database files, and secrets.
 
-### 2. Configure credentials
+### 2. Create the credentials file
 
 From the project directory, create a restricted environment file **outside the Docker build context**:
 
@@ -67,79 +66,48 @@ EOF
 chmod 600 ../gig-income-tracker.env
 ```
 
-Run this step once for a new deployment. Keep the file for later restarts and upgrades. Compose requires both passwords and gives the app its own non-superuser `gig_app` role; the PostgreSQL administrator password is not passed to the application. Hexadecimal passwords work directly in the connection URL assembled by Compose. Changing `POSTGRES_PASSWORD` after PostgreSQL has initialized does not change the database user's password; rotate it in PostgreSQL and update the file together.
+Run this only once for a new deployment. Keep the file for restarts and upgrades. The two generated passwords are for separate PostgreSQL administrator and application accounts. Changing this file later does not rotate an existing database password.
 
 Leave `GEMINI_API_KEY` empty to use local statistical insights, or set a real key to enable external AI analysis. The application sends income information, excluding free-text notes, to Gemini when that analysis runs.
 
-Compose reads this file through `--env-file` and supplies the application with `DATABASE_URL`, `NODE_ENV=production`, and `PORT=3000`. Keep credentials out of source control and the project directory. The Docker build context excludes `.env*` (except `.env.example`), `.npmrc`, and database dumps.
+Keep the file outside the project and out of source control. `./dc.sh` reads it automatically.
 
-### 3. Keep application and database ports private
+### 3. Configure the trusted proxy
 
-Create `compose.server.yml` in the project directory:
-
-```yaml
-services:
-  postgres:
-    ports: !reset []
-  tax-mileage-app:
-    ports: !override
-      - "127.0.0.1:3000:3000"
-```
-
-The base Compose file already keeps PostgreSQL unpublished and binds the app to loopback. This explicit server override preserves those defaults when composing additional configuration. Containers still reach PostgreSQL over the private Compose network.
-
-Define this shell helper in each new SSH session, after changing to `~/apps/gig-income-tracker`. Use it for all server operations so the environment file and port override are always applied:
+Start PostgreSQL, then find the Docker gateway address that the app will see for
+connections from Tailscale Serve:
 
 ```bash
-dc() {
-  docker compose --env-file ../gig-income-tracker.env \
-    -f docker-compose.yml -f compose.server.yml "$@"
-}
-```
-
-### 4. Configure the trusted host proxy
-
-`TRUST_PROXY` defaults to empty: forwarded headers are ignored. For the documented
-host-Tailscale Serve → loopback-published Docker app topology, trust only the Docker bridge
-gateway seen by the app. Start the database to create the network, then inspect it:
-
-```bash
-dc up -d postgres
-db_container_id=$(dc ps -q postgres)
+./dc.sh up -d postgres
+db_container_id=$(./dc.sh ps -q postgres)
 docker inspect "$db_container_id" --format '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'
 ```
 
-Add the displayed gateway as an exact address to the external environment file,
-for example `TRUST_PROXY=172.18.0.1/32`. Use the actual result, not this example.
-Then build/start the app below. If you recreate the network, check the gateway
-again and recreate the app if it changed. For a direct Node.js app behind Tailscale Serve
-on the same host, use the exact loopback addresses, for example
-`TRUST_PROXY=127.0.0.1/32,::1/128`.
+Add `TRUST_PROXY=GATEWAY/32` to `../gig-income-tracker.env`, replacing `GATEWAY`
+with the address printed above. This lets the app use the client address and HTTPS
+scheme forwarded by Serve. If you recreate the Docker network, check the gateway
+again and update this value if it changed.
 
-Only explicit IP addresses and nonzero CIDR ranges are accepted. Never use
-`true`, a hop count, or a blanket subnet to trust arbitrary forwarding headers.
-Keep the app port private: a caller reaching it from a trusted proxy address can
-supply forwarded client addresses. With the documented single Tailscale Serve proxy, each
-client has its own authentication limit (20 attempts per 15 minutes); a spoofed
-address prepended to an untrusted client address cannot bypass that limit.
-The bounded limiter is per process and resets after restart; multiple app
-instances require a shared limiter before scaling out.
+Use only the actual gateway address, not `true` or the entire subnet. The included
+`compose.server.yml` keeps PostgreSQL unpublished and binds the app to
+`127.0.0.1:3000` on the server.
 
-### 5. Build, start, and verify
+### 4. Start and check the app
 
 ```bash
-dc config --quiet
-dc up -d --build
-dc ps
-dc logs --tail=100 tax-mileage-app postgres
+./dc.sh config --quiet
+./dc.sh up -d --build
+./dc.sh ps
+./dc.sh logs --tail=100 tax-mileage-app postgres
 curl --fail http://127.0.0.1:3000/api/health
 ```
 
-The health response should contain `"status":"ok"` and `"database":"PostgreSQL"`. Compose waits for PostgreSQL's startup health check before starting the app. Tables are created automatically on application startup. `/api/health` executes a database query and returns HTTP 503 during an outage; responses are not cached. Compose uses it to mark app readiness. `/api/live` checks only that the HTTP process responds. Idle database connection failures do not terminate the process; the pool reconnects when PostgreSQL returns. An unhealthy status alone does not make Docker restart a running container.
+The health response should contain `"status":"ok"` and `"database":"PostgreSQL"`.
+If it does not, check `./dc.sh ps` and `./dc.sh logs --tail=100 tax-mileage-app postgres`.
 
-Both services use `restart: unless-stopped`. Keep the project directory/name consistent across deployments so Compose reuses the same named volume. `dc down` preserves database data; **`dc down -v` deletes the database volume**.
+Both services use `restart: unless-stopped`. Keep the project directory/name consistent across deployments so Compose reuses the same named volume. `./dc.sh down` preserves database data; **`./dc.sh down -v` deletes the database volume**.
 
-### 6. Enable HTTPS with Tailscale Serve
+### 5. Enable HTTPS with Tailscale Serve
 
 Run on the same host as Docker:
 
@@ -179,7 +147,7 @@ signup is disabled. To provision the first administrator after starting the app:
 read -r -p "Administrator email: " tracker_admin_email
 IFS= read -r -s -p "Administrator password (10–128 characters): " tracker_admin_password
 printf '\n'
-printf '%s\n%s\n' "$tracker_admin_email" "$tracker_admin_password" | dc exec -T tax-mileage-app node dist/create-admin.cjs
+printf '%s\n%s\n' "$tracker_admin_email" "$tracker_admin_password" | ./dc.sh exec -T tax-mileage-app node dist/create-admin.cjs
 unset tracker_admin_email tracker_admin_password
 ```
 
@@ -187,13 +155,13 @@ The command reads credentials from standard input and refuses to overwrite an ex
 
 ### Back up and restore PostgreSQL
 
-Run backups from the project directory with `dc` defined as above. A database dump includes accounts, financial records, and custom CRA rates. The application's versioned JSON export also includes custom CRA rates. Restoring older, unversioned exports preserves the account's current rates.
+Run backups from the project directory. A database dump includes accounts, financial records, and custom CRA rates. See the [backup and restore runbook](docs/DATABASE_BACKUP_RESTORE_RUNBOOK.md) for a full recovery procedure.
 
 ```bash
 umask 077
 mkdir -p ../gig-income-tracker-backups
 backup_file="../gig-income-tracker-backups/database-$(date -u +%Y%m%dT%H%M%SZ).dump"
-dc exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_file"
+./dc.sh exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_file"
 test -s "$backup_file"
 ```
 
@@ -203,25 +171,25 @@ To replace this deployment's data with a known backup, set its path and stop the
 
 ```bash
 backup_file=../gig-income-tracker-backups/database-YYYYMMDDTHHMMSSZ.dump
-dc stop tax-mileage-app
-dc exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --role=gig_app --single-transaction --exit-on-error' < "$backup_file"
+./dc.sh stop tax-mileage-app
+./dc.sh exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --role=gig_app --single-transaction --exit-on-error' < "$backup_file"
 # Continue only after pg_restore succeeds.
-dc start tax-mileage-app
+./dc.sh start tax-mileage-app
 curl --fail https://your-server.your-tailnet.ts.net/api/health
 ```
 
 ### Update or stop the application
 
-Back up the database before each update. Existing deployments upgrading from the previous shared database role must first follow [the security upgrade guide](docs/SECURITY_UPGRADE.md). For a Git checkout, fetch and select the release you intend to deploy; for an uploaded project, upload the new source while preserving `compose.server.yml` and the external environment file.
+Back up the database before each update. Existing deployments upgrading from the previous shared database role must first follow [the security upgrade guide](docs/SECURITY_UPGRADE.md). For a Git checkout, fetch and select the release you intend to deploy; for an uploaded project, upload the new source while preserving the external environment file.
 
 ```bash
 git fetch --tags origin
 # Replace YOUR_RELEASE_TAG_OR_COMMIT with the desired version.
 git checkout YOUR_RELEASE_TAG_OR_COMMIT
-dc config --quiet
-dc up -d --build
-dc ps
-dc logs --tail=100 tax-mileage-app
+./dc.sh config --quiet
+./dc.sh up -d --build
+./dc.sh ps
+./dc.sh logs --tail=100 tax-mileage-app
 curl --fail https://your-server.your-tailnet.ts.net/api/health
 ```
 
@@ -229,12 +197,12 @@ A single application container can have a brief interruption during an update. T
 
 ```bash
 # Stop the services and keep the database volume.
-dc down
+./dc.sh down
 ```
 
 ### Troubleshooting
 
-- **Serve cannot reach the app:** check `dc ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
+- **Serve cannot reach the app:** check `./dc.sh ps`, application logs, and the local health URL. Confirm the app publishes `127.0.0.1:3000:3000`.
 - **PostgreSQL authentication fails:** check the environment file and database logs. Existing volumes keep their original database credentials even if the environment file changes.
 - **Application repeatedly exits:** production requires reachable PostgreSQL and does not fall back to SQLite. Startup failures exit with a nonzero status; inspect logs and the health URL to diagnose the cause.
 - **All users receive authentication rate limits:** verify `TRUST_PROXY` matches the actual gateway/proxy address and recreate the app after changing it. Keep direct access private. Limits are per process; restart clears them. Multi-instance deployments need a shared limiter.
