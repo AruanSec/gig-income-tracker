@@ -603,7 +603,7 @@ export default function App() {
             Incomplete mileage estimate: configure verified planning rates for {missingRateYears(mileageEntries, craRates).join(", ")} in CRA Rates. Trips from these years are excluded from estimates; rates are never borrowed from another year.
           </div>
         )}
-        <p className="text-xs text-slate-500">Planning only. Review saved annual rates, business-use percentage, and GST/HST eligibility before filing. Recorded GST/HST is not automatically recoverable.</p>
+        <p className="app-planning-note text-xs text-slate-500">Planning only. Review saved annual rates, business-use percentage, and GST/HST eligibility before filing. Recorded GST/HST is not automatically recoverable.</p>
 
         {/* Tab switcher */}
         <div className="app-tabs" id="tabs-navigation" aria-label="Dashboard sections">
@@ -672,7 +672,7 @@ export default function App() {
               id="income-tab-view"
             >
               {/* 1. Statistics Grid & Tax Calculator Banner */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-transparent border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4">
+              <div className="app-estimator-callout flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-transparent border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-xs">
                     <Calculator className="w-5 h-5" />
