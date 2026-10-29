@@ -140,33 +140,33 @@ export default function DateRangePicker({
         </div>
 
         {/* Custom Inputs */}
-        <div className="lg:col-span-5 flex items-center gap-2.5 w-full" id="manual-inputs-container">
-          <div className="flex-1 flex flex-col gap-1">
-            <span className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider pl-0.5">
+        <div className="lg:col-span-5 flex flex-col sm:flex-row sm:items-center gap-2.5 w-full min-w-0" id="manual-inputs-container">
+          <div className="w-full min-w-0 flex-1 flex flex-col gap-1">
+            <label htmlFor="date-picker-start" className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider pl-0.5">
               From Date
-            </span>
+            </label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => onChange(e.target.value, endDate)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition [color-scheme:light_dark]"
+              className="w-full min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition [color-scheme:light_dark]"
               id="date-picker-start"
             />
           </div>
 
-          <div className="text-slate-300 dark:text-slate-700 shrink-0 font-medium pt-4.5">
+          <div className="hidden sm:block text-slate-300 dark:text-slate-700 shrink-0 font-medium pt-4.5">
             <CalendarDays className="w-3.5 h-3.5" />
           </div>
 
-          <div className="flex-1 flex flex-col gap-1">
-            <span className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider pl-0.5">
+          <div className="w-full min-w-0 flex-1 flex flex-col gap-1">
+            <label htmlFor="date-picker-end" className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider pl-0.5">
               To Date
-            </span>
+            </label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => onChange(startDate, e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition [color-scheme:light_dark]"
+              className="w-full min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition [color-scheme:light_dark]"
               id="date-picker-end"
             />
           </div>

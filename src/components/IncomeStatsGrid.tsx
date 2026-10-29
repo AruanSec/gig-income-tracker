@@ -53,25 +53,25 @@ export default function IncomeStatsGrid({ stats }: IncomeStatsGridProps) {
       {/* Primary Hero Card - Total Earnings */}
       <motion.div
         variants={cardVariants}
-        className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
+        className="p-5 bg-teal-950 dark:bg-teal-950 rounded-2xl border border-teal-900 shadow-lg shadow-teal-950/10 flex flex-col justify-between relative overflow-hidden group hover:border-teal-700 transition duration-350"
       >
-        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-24 h-24 bg-blue-50 dark:bg-blue-950/20 rounded-full opacity-40 blur-xl group-hover:scale-125 transition duration-500"></div>
+        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-24 h-24 bg-emerald-300/20 rounded-full blur-xl group-hover:scale-125 transition duration-500"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-emerald-100/75 uppercase tracking-wider">
               Total Net Income
             </span>
-            <div className="p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
-              <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="p-1.5 bg-white/10 rounded-lg border border-white/15">
+              <DollarSign className="w-4 h-4 text-emerald-200" />
             </div>
           </div>
-          <h4 className="text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400 mt-4 font-mono">
+          <h4 className="text-3xl font-bold tracking-tight text-white mt-4 font-mono">
             {formatCurrency(stats.totalEarnings)}
           </h4>
         </div>
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 relative z-10">
+        <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-emerald-100/75 relative z-10">
           <span>Fare: {formatCurrency(stats.totalNetFare)}</span>
-          <span className="text-emerald-600 dark:text-emerald-450 font-semibold">
+          <span className="text-emerald-200 font-semibold">
             + {formatCurrency(stats.totalTips)} tips
           </span>
         </div>

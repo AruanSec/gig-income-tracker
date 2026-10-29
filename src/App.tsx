@@ -5,7 +5,7 @@ import { addMoney, sumMoney } from "./money";
  */
 
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
-import { PlusCircle, RefreshCw, HelpCircle, TrendingUp, Landmark, ShieldCheck, DollarSign, LogOut, Car, Route, Download, Upload, Database, Sun, Moon, Trash2, Beaker, Settings, Lock, Calculator } from "lucide-react";
+import { PlusCircle, RefreshCw, HelpCircle, TrendingUp, Landmark, ShieldCheck, DollarSign, LogOut, Car, Route, Download, Upload, Sun, Moon, Trash2, Beaker, Settings, Lock, Calculator } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 import { ApiError, deleteRecord, fetchJson, saveRecord } from "./api";
@@ -532,197 +532,64 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300" id="app-root">
+    <div className="app-root min-h-screen text-slate-900 dark:text-slate-100 font-sans" id="app-root">
 
-      {/* Header Area */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs animate-in fade-in slide-in-from-top-4 duration-300" id="app-header">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span className="w-2.5 h-8 bg-blue-600 rounded-full self-center shrink-0"></span>
+      {/* Compact account toolbar */}
+      <header className="app-header" id="app-header">
+        <div className="app-header-inner">
+          <div className="app-brand" aria-label="Revenue and Mileage Tracker">
+            <div className="app-brand-mark"><Route className="h-5 w-5" /></div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Revenue & Mileage Tracker</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Track earnings, business mileage, and planning estimates</p>
-
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Active Sync: <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">{userEmail}</span></span>
-              </div>
+              <div className="app-brand-name">Route & Revenue</div>
+              <div className="app-brand-caption">Your gig work dashboard</div>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Quick Stats in Header for Desktop/Tablet */}
-            <div className="hidden sm:flex items-center gap-3 mr-2">
-              {activeTab === "income" ? (
-                <>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[150px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Net Income</p>
-                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">{formatCurrency(stats.totalEarnings)}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[130px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg. Hourly</p>
-                    <p className="text-lg font-bold text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(stats.averageEarningsPerHourOnline)}</p>
-                  </div>
-                </>
-              ) : activeTab === "mileage" ? (
-                <>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[150px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mileage Estimate</p>
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatCurrency(mileageStats.totalDeduction)}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[130px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Operating Costs</p>
-                    <p className="text-lg font-bold text-slate-800 dark:text-slate-200 font-mono">
-                      {formatCurrency(sumMoney<VehicleExpense>(vehicleExpenses, item => item.amount))}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[150px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tracked GST/HST</p>
-                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
-                      {formatCurrency(sumMoney<VehicleExpense>(vehicleExpenses, item => item.gstHstAmount || 0))}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-left min-w-[130px]">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Revenue</p>
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatCurrency(sumMoney<IncomeEntry>(entries, item => addMoney(item.netFare, item.tips)))}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* CRA Rates Settings Button */}
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  className="px-3 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/60 hover:text-blue-700 dark:hover:text-blue-300 transition flex items-center gap-1.5 cursor-pointer"
-                  title="Configure custom CRA mileage deduction rates annually"
-                  id="settings-btn"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>CRA Rates</span>
-                </button>
-              )}
-
-              {/* Change Password Button */}
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowChangePasswordModal(true)}
-                  className="px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 cursor-pointer"
-                  title="Change account password securely"
-                  id="change-password-btn"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Change Password</span>
-                </button>
-              )}
-
-              {/* Theme Toggle Button */}
-              <button
-                onClick={toggleTheme}
-                className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 cursor-pointer"
-                title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-                id="theme-toggle-btn"
-              >
-                {theme === "light" ? (
-                  <>
-                    <Moon className="w-3.5 h-3.5" />
-                    <span className="hidden md:inline">Dark Mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Sun className="w-3.5 h-3.5" />
-                    <span className="hidden md:inline">Light Mode</span>
-                  </>
-                )}
-              </button>
-
-              {/* Backup Button */}
-              <button
-                onClick={handleBackupData}
-                className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 cursor-pointer"
-                title="Download local backup file"
-                id="backup-btn"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Backup</span>
-              </button>
-
-              {/* Restore Button */}
-              <label
-                className="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 cursor-pointer"
-                title="Restore from JSON backup file"
-                id="restore-btn"
-              >
-                <Upload className="w-3.5 h-3.5 inline mr-1" />
-                <span className="hidden md:inline">Restore</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleRestoreData}
-                  className="hidden"
-                />
-              </label>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-300 transition flex items-center gap-1.5 cursor-pointer"
-                title="Log out of account"
-                id="logout-btn"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Log Out</span>
-              </button>
-
-              {/* Tax Deduction Calculator Button */}
-              <button
-                onClick={() => setIsTaxCalcOpen(true)}
-                className="px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900/60 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                id="open-tax-calc-header-btn"
-                title="Open Tax Deduction Calculator"
-              >
-                <Calculator className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Tax Calculator</span>
-              </button>
-
-              {/* Main Log Button */}
-              {activeTab !== "tax" && activeTab !== "admin" && (
-                <button
-                  onClick={
-                    activeTab === "income"
-                      ? handleCreateNewEntry
-                      : mileageSubTab === "expenses"
-                        ? handleCreateNewVehicleExpense
-                        : handleCreateNewMileageEntry
-                  }
-                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition flex items-center gap-1.5 shadow-md shadow-blue-100 border border-blue-700 cursor-pointer"
-                  id="main-log-btn"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>
-                    {activeTab === "income"
-                      ? "Log Weekly Income"
-                      : mileageSubTab === "expenses"
-                        ? "Log Vehicle Expense"
-                        : "Log Business Trip"}
-                  </span>
-                </button>
-              )}
-            </div>
+          <div className="app-toolbar" aria-label="Account tools">
+            <span className="app-account" title={userEmail || undefined}>{userEmail}</span>
+            <button onClick={() => setShowSettingsModal(true)} className="app-tool-button" title="Configure CRA rates" aria-label="Configure CRA rates" id="settings-btn"><Settings className="h-4 w-4" /><span>CRA Rates</span></button>
+            <button onClick={() => setShowChangePasswordModal(true)} className="app-tool-button" title="Change password" aria-label="Change password" id="change-password-btn"><Lock className="h-4 w-4" /><span>Password</span></button>
+            <button onClick={toggleTheme} className="app-tool-button app-icon-button" title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"} aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"} id="theme-toggle-btn">
+              {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </button>
+            <button onClick={handleBackupData} className="app-tool-button app-icon-button" title="Download backup" aria-label="Download backup" id="backup-btn"><Download className="h-4 w-4" /></button>
+            <label className="app-tool-button app-icon-button" title="Restore from JSON backup" id="restore-btn">
+              <Upload className="h-4 w-4" /><span className="sr-only">Restore from JSON backup</span>
+              <input type="file" accept=".json" onChange={handleRestoreData} className="sr-only" aria-label="Restore from JSON backup" />
+            </label>
+            <button onClick={handleLogout} className="app-tool-button app-icon-button app-logout-button" title="Log out" aria-label="Log out" id="logout-btn"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" id="app-main">
+      <main className="app-main" id="app-main">
+        <section className="app-hero" aria-labelledby="workspace-title">
+          <div className="app-hero-content">
+            <p className="app-eyebrow">YOUR WORKSPACE <span aria-hidden="true">/</span> {activeTab === "income" ? "EARNINGS" : activeTab === "mileage" ? "ON THE ROAD" : activeTab === "tax" ? "PLANNING" : "ADMIN"}</p>
+            <h1 id="workspace-title">{activeTab === "income" ? "Know what your work earns." : activeTab === "mileage" ? "Every kilometre counts." : activeTab === "tax" ? "See the bigger picture." : "Manage your workspace."}</h1>
+            <p className="app-hero-description">{activeTab === "income" ? "Track shifts, compare performance, and keep your income organized." : activeTab === "mileage" ? "Log trips and operating costs in one clear place." : activeTab === "tax" ? "Review your records and explore planning estimates." : "Review accounts and database tools."}</p>
+            <div className="app-hero-actions">
+              {activeTab !== "tax" && activeTab !== "admin" && (
+                <button
+                  onClick={activeTab === "income" ? handleCreateNewEntry : mileageSubTab === "expenses" ? handleCreateNewVehicleExpense : handleCreateNewMileageEntry}
+                  className="app-primary-button"
+                  id="main-log-btn"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  {activeTab === "income" ? "Log weekly income" : mileageSubTab === "expenses" ? "Log vehicle expense" : "Log business trip"}
+                </button>
+              )}
+              <button onClick={() => setIsTaxCalcOpen(true)} className="app-secondary-button" id="open-tax-calc-header-btn" title="Open Tax Deduction Calculator">
+                <Calculator className="h-4 w-4" /> Tax calculator
+              </button>
+            </div>
+          </div>
+          <div className="app-hero-metric">
+            <div className="app-hero-metric-icon">{activeTab === "mileage" ? <Car className="h-5 w-5" /> : activeTab === "tax" ? <Landmark className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}</div>
+            <p>{activeTab === "income" ? "TOTAL NET INCOME" : activeTab === "mileage" ? "BUSINESS DISTANCE" : activeTab === "tax" ? "TRACKED REVENUE" : "TOTAL RECORDS"}</p>
+            <strong>{activeTab === "income" ? formatCurrency(stats.totalEarnings) : activeTab === "mileage" ? `${mileageStats.totalKm.toLocaleString()} km` : activeTab === "tax" ? formatCurrency(sumMoney<IncomeEntry>(entries, item => addMoney(item.netFare, item.tips))) : (entries.length + mileageEntries.length + vehicleExpenses.length).toLocaleString()}</strong>
+            <span>{activeTab === "income" ? `${entries.length} income ${entries.length === 1 ? "log" : "logs"} recorded` : activeTab === "mileage" ? `${mileageEntries.length} business ${mileageEntries.length === 1 ? "trip" : "trips"} recorded` : activeTab === "tax" ? "From your saved income logs" : "Across income, trips, and expenses"}</span>
+          </div>
+        </section>
         {dataError && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
             <span>{dataError}</span>
@@ -738,69 +605,56 @@ export default function App() {
         )}
         <p className="text-xs text-slate-500">Planning only. Review saved annual rates, business-use percentage, and GST/HST eligibility before filing. Recorded GST/HST is not automatically recoverable.</p>
 
-        {/* Banner Informational Accent */}
-        <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/45 rounded-2xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg shrink-0 mt-0.5">
-            <Database className="w-4 h-4" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-xs font-bold text-emerald-950 dark:text-emerald-300 uppercase tracking-wide">Secure SQLite Sync Active</h4>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              Your weekly income logs, business trips, and vehicle operating expenses are stored in the configured database and scoped exclusively to your account.
-            </p>
-          </div>
-        </div>
-
         {/* Tab switcher */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800" id="tabs-navigation">
+        <div className="app-tabs" id="tabs-navigation" aria-label="Dashboard sections">
           <button
             onClick={() => setActiveTab("income")}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition cursor-pointer ${
+            className={`app-tab ${
               activeTab === "income"
-                ? "border-blue-600 text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
+                ? "app-tab-active"
+                : ""
             }`}
-            id="tab-income-trigger"
+            id="tab-income-trigger" aria-pressed={activeTab === "income"}
           >
             <DollarSign className="w-4 h-4" />
-            <span>Weekly Income Logs</span>
+            <span>Income</span>
           </button>
           <button
             onClick={() => setActiveTab("mileage")}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition cursor-pointer ${
+            className={`app-tab ${
               activeTab === "mileage"
-                ? "border-blue-600 text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
+                ? "app-tab-active"
+                : ""
             }`}
-            id="tab-mileage-trigger"
+            id="tab-mileage-trigger" aria-pressed={activeTab === "mileage"}
           >
             <Car className="w-4 h-4" />
-            <span>Vehicle & Mileage Logs</span>
+            <span>Mileage & expenses</span>
           </button>
           <button
             onClick={() => setActiveTab("tax")}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition cursor-pointer ${
+            className={`app-tab ${
               activeTab === "tax"
-                ? "border-blue-600 text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
+                ? "app-tab-active"
+                : ""
             }`}
-            id="tab-tax-trigger"
+            id="tab-tax-trigger" aria-pressed={activeTab === "tax"}
           >
             <Landmark className="w-4 h-4" />
-            <span>Tax & Profit Summary</span>
+            <span>Tax & profit</span>
           </button>
           {userRole === "admin" && (
             <button
               onClick={() => setActiveTab("admin")}
-              className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition cursor-pointer ${
+              className={`app-tab ${
                 activeTab === "admin"
-                  ? "border-red-600 text-red-600 dark:text-red-400 border-red-600 dark:border-red-400"
-                  : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
+                  ? "app-tab-active"
+                  : ""
               }`}
-              id="tab-admin-trigger"
+              id="tab-admin-trigger" aria-pressed={activeTab === "admin"}
             >
               <ShieldCheck className="w-4 h-4 text-red-500" />
-              <span>Admin Database Portal</span>
+              <span>Admin</span>
             </button>
           )}
         </div>
@@ -1264,9 +1118,9 @@ export default function App() {
       />
 
       {/* Page Footer Status Bar */}
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-200 dark:border-slate-800 mt-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col sm:flex-row justify-between items-center gap-3" id="app-footer">
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-200 dark:border-slate-800 mt-8 text-slate-500 dark:text-slate-400 text-xs flex flex-col sm:flex-row justify-between items-center gap-3" id="app-footer">
         <div className="flex flex-wrap items-center gap-2">
-          <span>Local Storage Enabled</span>
+          <span>Records are saved to your account.</span>
           <span className="text-slate-300 dark:text-slate-800">•</span>
           <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
             Shortcuts:
@@ -1275,14 +1129,7 @@ export default function App() {
             <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-mono text-slate-600 dark:text-slate-300">Ctrl+S</kbd> Save Form
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            System Ready
-          </span>
-          <span className="text-slate-300 dark:text-slate-800">|</span>
-          <span>Build v1.1.0-CRA</span>
-        </div>
+        <span>Route & Revenue</span>
       </footer>
     </div>
   );

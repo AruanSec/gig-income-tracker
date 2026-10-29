@@ -51,7 +51,7 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 relative lg:px-8 transition-colors duration-300" id="auth-page">
+    <div className="auth-page min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 relative lg:px-8 transition-colors duration-300" id="auth-page">
       {/* Theme Toggle for Login Page */}
       {toggleTheme && theme && (
         <div className="absolute top-4 right-4">
@@ -68,22 +68,22 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center" id="auth-logo-container">
-          <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-200 dark:shadow-none">
+          <div className="h-14 w-14 rounded-2xl bg-teal-900 flex items-center justify-center text-emerald-100 shadow-lg shadow-teal-900/20 dark:shadow-none">
             <ShieldCheck className="h-6 w-6" />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" id="auth-title">
-          Sign in to your account
+          Welcome back
         </h2>
         <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-          Access your earnings, mileage records, and tax-planning estimates from any device.
+          Your earnings, mileage, and planning records are ready when you are.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <motion.div 
           layout 
-          className="bg-white dark:bg-slate-900 py-8 px-4 shadow-sm border border-slate-200/80 dark:border-slate-800 sm:rounded-2xl sm:px-10"
+          className="auth-card bg-white dark:bg-slate-900 py-8 px-6 shadow-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:px-10"
           id="auth-card"
         >
           <form className="space-y-6" onSubmit={handleSubmit} id="auth-form">
@@ -143,7 +143,7 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-blue-700 rounded-xl shadow-xs text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-teal-900 rounded-xl shadow-xs text-sm font-bold text-white bg-teal-900 hover:bg-teal-800 active:bg-teal-950 transition-all cursor-pointer disabled:opacity-50"
                 id="auth-submit-btn"
               >
                 {loading ? (
