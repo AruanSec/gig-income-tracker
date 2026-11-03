@@ -297,7 +297,7 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
 
   return (
     <div
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6 text-left"
+      className="app-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6 text-left"
       id="weekly-comparison-card"
     >
       {/* Top Header & Navigation Bar */}
@@ -395,7 +395,7 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
       {/* Hero Growth Indicator Card Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {/* Main Growth Percentage Card */}
-        <div className="md:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-2xl p-4 border border-slate-800 shadow-md relative overflow-hidden flex flex-col justify-between">
+        <div className="app-card md:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-2xl p-4 border border-slate-800 shadow-md relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
@@ -460,7 +460,7 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
         </div>
 
         {/* Hourly Rate Comparison Card */}
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-blue-500" />
@@ -493,7 +493,7 @@ export default function WeeklyComparisonChart({ entries }: WeeklyComparisonChart
         </div>
 
         {/* Trips Comparison Card */}
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider flex items-center gap-1">
               <Briefcase className="w-3.5 h-3.5 text-purple-500" />

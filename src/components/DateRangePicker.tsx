@@ -31,7 +31,7 @@ export default function DateRangePicker({
 
   return (
     <div 
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3.5"
+      className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3.5"
       id="date-range-picker-container"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

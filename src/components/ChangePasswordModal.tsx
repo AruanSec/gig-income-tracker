@@ -77,7 +77,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-250 dark:border-slate-800 overflow-hidden animate-in fade-in"
+        className="app-card w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-250 dark:border-slate-800 overflow-hidden animate-in fade-in"
         id="change-password-modal-card"
       >
         {/* Header */}
@@ -107,14 +107,14 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4" id="change-password-form">
           {error && (
-            <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-4 border border-red-100 dark:border-red-900/40 flex items-start gap-3" id="password-error-box">
+            <div className="app-card rounded-xl bg-red-50 dark:bg-red-950/20 p-4 border border-red-100 dark:border-red-900/40 flex items-start gap-3" id="password-error-box">
               <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
               <div className="text-xs text-red-700 dark:text-red-350 font-medium leading-relaxed">{error}</div>
             </div>
           )}
 
           {success && (
-            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/25 p-4 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-3" id="password-success-box">
+            <div className="app-card rounded-xl bg-emerald-50 dark:bg-emerald-950/25 p-4 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-3" id="password-success-box">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
               <div className="text-xs text-emerald-700 dark:text-emerald-355 font-medium leading-relaxed">{success}</div>
             </div>

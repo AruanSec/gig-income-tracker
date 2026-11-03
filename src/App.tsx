@@ -36,7 +36,7 @@ const EarningsAIInsights = lazy(() => import("./components/EarningsAIInsights"))
 const AdminPortal = lazy(() => import("./components/AdminPortal"));
 
 const DeferredViewFallback = () => (
-  <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+  <div className="app-card rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
     Loading view…
   </div>
 );
@@ -672,7 +672,7 @@ export default function App() {
               id="income-tab-view"
             >
               {/* 1. Statistics Grid & Tax Calculator Banner */}
-              <div className="app-estimator-callout flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-transparent border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4">
+              <div className="app-card app-estimator-callout flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-transparent border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-xs">
                     <Calculator className="w-5 h-5" />
@@ -979,7 +979,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in"
+              className="app-card w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-emerald-50/10 dark:bg-slate-900/50 shrink-0">
@@ -1006,7 +1006,7 @@ export default function App() {
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="bg-slate-950 dark:bg-black rounded-xl p-4 font-mono text-xs text-slate-300 border border-slate-850 space-y-3 shadow-inner">
+                <div className="app-card bg-slate-950 dark:bg-black rounded-xl p-4 font-mono text-xs text-slate-300 border border-slate-850 space-y-3 shadow-inner">
                   <div className="text-emerald-400 font-bold border-b border-slate-800/80 pb-2 flex items-center justify-between">
                     <span>🧪 TEST RUNNER SHELL v1.0.0</span>
                     <span className="px-2 py-0.5 bg-emerald-950/55 text-emerald-400 text-[10px] rounded-md border border-emerald-800/40">ACTIVE</span>
@@ -1078,7 +1078,7 @@ export default function App() {
                 </div>
 
                 {/* Performance & Execution Summary */}
-                <div className="p-4 bg-emerald-50/30 dark:bg-emerald-950/25 border border-emerald-100/50 dark:border-emerald-900/30 rounded-xl space-y-2">
+                <div className="app-card p-4 bg-emerald-50/30 dark:bg-emerald-950/25 border border-emerald-100/50 dark:border-emerald-900/30 rounded-xl space-y-2">
                   <h4 className="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                     Execution Summary
                   </h4>

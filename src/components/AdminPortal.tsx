@@ -319,7 +319,7 @@ export default function AdminPortal() {
 
       {/* Messages */}
       {error && (
-        <div className="rounded-xl bg-red-50 dark:bg-red-950/20 p-4 border border-red-100 dark:border-red-900/40 flex items-start gap-3 text-left" id="admin-error-box">
+        <div className="app-card rounded-xl bg-red-50 dark:bg-red-950/20 p-4 border border-red-100 dark:border-red-900/40 flex items-start gap-3 text-left" id="admin-error-box">
           <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
           <div>
             <h5 className="text-xs font-bold text-red-800 dark:text-red-300">Admin Action Error</h5>
@@ -329,7 +329,7 @@ export default function AdminPortal() {
       )}
 
       {successMessage && (
-        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/25 p-4 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-3 text-left" id="admin-success-box">
+        <div className="app-card rounded-xl bg-emerald-50 dark:bg-emerald-950/25 p-4 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-3 text-left" id="admin-success-box">
           <Check className="h-4.5 w-4.5 text-emerald-500 shrink-0 mt-0.5" />
           <div>
             <h5 className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Database Synchronized</h5>
@@ -339,7 +339,7 @@ export default function AdminPortal() {
       )}
 
       {/* Admin Title Card */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-850 dark:from-slate-950 dark:to-slate-900 rounded-2xl p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
+      <div className="app-card bg-gradient-to-r from-slate-900 to-slate-850 dark:from-slate-950 dark:to-slate-900 rounded-2xl p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
         <div className="flex items-center gap-3.5">
           <div className="p-3 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 shadow-inner">
             <ShieldAlert className="w-6.5 h-6.5" />
@@ -405,7 +405,7 @@ export default function AdminPortal() {
           <div className="space-y-6 text-left animate-in fade-in duration-200">
             {/* Top Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
+              <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Drivers</p>
                   <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.usersCount}</p>
@@ -415,7 +415,7 @@ export default function AdminPortal() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
+              <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Aggregated Earnings</p>
                   <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(stats.totalEarnings)}</p>
@@ -425,7 +425,7 @@ export default function AdminPortal() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
+              <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Distance Tracked</p>
                   <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{(stats.totalDistance / 10).toFixed(1)} km</p>
@@ -435,7 +435,7 @@ export default function AdminPortal() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
+              <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total ExpensesLogged</p>
                   <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{formatCurrency(stats.totalExpenses)}</p>
@@ -450,7 +450,7 @@ export default function AdminPortal() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
               {/* Table stats list */}
-              <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="app-card lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-blue-500" /> Database Table Allocations
@@ -471,7 +471,7 @@ export default function AdminPortal() {
               </div>
 
               {/* SQLite Health summary card */}
-              <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="app-card lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <HardDrive className="w-4 h-4 text-emerald-500" /> SQLite Driver Details
@@ -480,7 +480,7 @@ export default function AdminPortal() {
                 </div>
 
                 <div className="space-y-3.5">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-850 rounded-xl flex items-start gap-3">
+                  <div className="app-card p-4 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-850 rounded-xl flex items-start gap-3">
                     <Database className="w-5 h-5 text-slate-450 mt-0.5 shrink-0" />
                     <div className="text-xs space-y-1">
                       <p className="font-bold text-slate-700 dark:text-slate-300">Durable SQLite Engine Active</p>
@@ -533,7 +533,7 @@ export default function AdminPortal() {
             </div>
 
             {/* Users Table */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -668,7 +668,7 @@ export default function AdminPortal() {
             </div>
 
             {/* Selected Inner Table */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
 
                 {dataSubTab === "income" && (
@@ -838,7 +838,7 @@ export default function AdminPortal() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+              className="app-card w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
@@ -922,7 +922,7 @@ export default function AdminPortal() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+              className="app-card w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">

@@ -135,7 +135,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full max-w-lg max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+        className="app-card w-full max-w-lg max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         id="vehicle-expense-form"
       >
         {/* Header */}
@@ -233,7 +233,7 @@ export default function VehicleExpenseForm({ entryToEdit, onSave, onCancel }: Ve
           </div>
 
           {/* GST/HST Tracking Section */}
-          <div className="p-3.5 bg-blue-50/20 dark:bg-blue-950/20 rounded-xl border border-blue-100/50 dark:border-blue-900/40 space-y-3" id="gst-hst-tracking-box">
+          <div className="app-card p-3.5 bg-blue-50/20 dark:bg-blue-950/20 rounded-xl border border-blue-100/50 dark:border-blue-900/40 space-y-3" id="gst-hst-tracking-box">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
                 <input

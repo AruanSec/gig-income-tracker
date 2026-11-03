@@ -83,7 +83,7 @@ export default function AuthView({ onAuthSuccess, theme, toggleTheme }: AuthView
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <motion.div 
           layout 
-          className="auth-card bg-white dark:bg-slate-900 py-8 px-6 shadow-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:px-10"
+          className="app-card auth-card bg-white dark:bg-slate-900 py-8 px-6 shadow-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:px-10"
           id="auth-card"
         >
           <form className="space-y-6" onSubmit={handleSubmit} id="auth-form">

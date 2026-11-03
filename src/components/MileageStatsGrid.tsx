@@ -20,7 +20,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
         
         {/* Total Kilometres Driven */}
         <div 
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-blue-300 dark:hover:border-blue-850 transition-all duration-300"
+          className="app-card bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-blue-300 dark:hover:border-blue-850 transition-all duration-300"
           id="stat-card-total-km"
         >
           <div className="space-y-2">
@@ -44,7 +44,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
 
         {/* Total Kilometre Estimate Value */}
         <div 
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-850 transition-all duration-300"
+          className="app-card bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-850 transition-all duration-300"
           id="stat-card-total-deduction"
         >
           <div className="space-y-2">
@@ -67,7 +67,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
 
         {/* Total Maintenance Expenses Card */}
         <div 
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-purple-300 dark:hover:border-purple-850 transition-all duration-300"
+          className="app-card bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between relative overflow-hidden group hover:border-purple-300 dark:hover:border-purple-850 transition-all duration-300"
           id="stat-card-total-expenses"
         >
           <div className="space-y-2">
@@ -90,7 +90,7 @@ export default function MileageStatsGrid({ stats, entries, expenses }: MileageSt
 
         {/* Mileage Comparison Card */}
         <div 
-          className="bg-slate-900 dark:bg-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-md flex items-start justify-between relative overflow-hidden group hover:border-emerald-500 transition-all duration-300"
+          className="app-card bg-slate-900 dark:bg-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-md flex items-start justify-between relative overflow-hidden group hover:border-emerald-500 transition-all duration-300"
           id="stat-card-combined-deduction"
         >
           <div className="space-y-2 relative z-10">

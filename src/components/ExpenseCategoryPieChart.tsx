@@ -127,7 +127,7 @@ export default function ExpenseCategoryPieChart({ expenses }: ExpenseCategoryPie
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5" id="expense-pie-chart-card">
+    <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5" id="expense-pie-chart-card">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-2">

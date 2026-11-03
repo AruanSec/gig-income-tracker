@@ -86,7 +86,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
 
   if (!entries || entries.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center text-left">
+      <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center text-left">
         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
           <Brain className="w-5 h-5 text-purple-500" />
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">AI Weekly Earnings & Trend Analysis</h3>
@@ -99,7 +99,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 border border-slate-800 shadow-xl space-y-6 text-left relative overflow-hidden" id="gemini-earnings-insights-card">
+    <div className="app-card bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 border border-slate-800 shadow-xl space-y-6 text-left relative overflow-hidden" id="gemini-earnings-insights-card">
       {/* Subtle Background Glow */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -151,7 +151,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
 
       {/* Error Message */}
       {error && !loading && (
-        <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl flex items-center justify-between gap-3 text-rose-300 text-xs relative z-10">
+        <div className="app-card p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl flex items-center justify-between gap-3 text-rose-300 text-xs relative z-10">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
@@ -171,7 +171,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
 
           {/* Executive Rating & Top KPI Bar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
+            <div className="app-card bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block flex items-center gap-1">
                 <Award className="w-3.5 h-3.5 text-purple-400" /> Efficiency Score
               </span>
@@ -185,7 +185,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
               </div>
             </div>
 
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
+            <div className="app-card bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-blue-400" /> Average Revenue / Hour
               </span>
@@ -199,7 +199,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
               </div>
             </div>
 
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
+            <div className="app-card bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block flex items-center gap-1">
                 <Zap className="w-3.5 h-3.5 text-amber-400" /> Peak Performing Window
               </span>
@@ -215,7 +215,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
           </div>
 
           {/* Trend Summary Quote */}
-          <div className="p-4 bg-purple-950/30 border border-purple-800/40 rounded-2xl">
+          <div className="app-card p-4 bg-purple-950/30 border border-purple-800/40 rounded-2xl">
             <p className="text-xs text-purple-100 leading-relaxed italic">
               "{analysis.weeklyTrendSummary}"
             </p>
@@ -254,7 +254,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
               {analysis.actionableSuggestions.map((sugg, idx) => (
                 <div
                   key={idx}
-                  className="bg-slate-850/80 border border-slate-800 hover:border-purple-500/40 rounded-2xl p-4 space-y-2 transition flex flex-col justify-between"
+                  className="app-card bg-slate-850/80 border border-slate-800 hover:border-purple-500/40 rounded-2xl p-4 space-y-2 transition flex flex-col justify-between"
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -290,7 +290,7 @@ export default function EarningsAIInsights({ entries }: EarningsAIInsightsProps)
               {analysis.keyInsights.map((insight, idx) => (
                 <div
                   key={idx}
-                  className="bg-slate-850/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="app-card bg-slate-850/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-white flex items-center gap-2">

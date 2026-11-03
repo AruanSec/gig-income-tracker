@@ -102,7 +102,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
     <div className="space-y-6 animate-fade-in" id="combined-deductions-container">
       
       {/* 1. Combined Totals Summary Banner */}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 relative overflow-hidden" id="combined-totals-banner">
+      <div className="app-card bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 relative overflow-hidden" id="combined-totals-banner">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl -ml-16 -mb-16"></div>
 
@@ -160,7 +160,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         
         {/* Mileage Method Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest block">Method A</span>
@@ -193,7 +193,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
         </div>
 
         {/* Maintenance Method Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest block">Method B</span>
@@ -228,7 +228,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
       </div>
 
       {/* 3. Combined Monthly Period Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm" id="combined-periods-table-card">
+      <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm" id="combined-periods-table-card">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-900/50">
           <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">Vehicle Planning Per Month</h4>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Periodical comparison of mileage deductions vs operating costs</p>
@@ -271,7 +271,7 @@ export default function CombinedDeductionsView({ mileageEntries, expenses, craRa
       </div>
 
       {/* 4. CRA Education Section */}
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4" id="cra-education-panel">
+      <div className="app-card bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4" id="cra-education-panel">
         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <Landmark className="w-4 h-4 text-blue-600 dark:text-blue-400" /> 
           CRA Filing Guide & Educational Insights

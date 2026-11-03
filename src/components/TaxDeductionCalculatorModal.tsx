@@ -152,14 +152,14 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
       id="tax-calculator-modal-backdrop"
     >
       <div
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden my-6 transform transition-all flex flex-col max-h-[90vh]"
+        className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden my-6 transform transition-all flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         id="tax-calculator-modal-content"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-100 dark:border-emerald-900/50">
+            <div className="app-card p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-100 dark:border-emerald-900/50">
               <Calculator className="w-5 h-5" />
             </div>
             <div>
@@ -189,7 +189,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
           
           {/* Top Quick Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl p-4 text-left">
+            <div className="app-card bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl p-4 text-left">
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
                 Estimated Tax Saved
               </span>
@@ -201,7 +201,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
               </span>
             </div>
 
-            <div className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 text-left">
+            <div className="app-card bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 text-left">
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400 block">
                 Total Tax Write-Offs
               </span>
@@ -213,7 +213,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
               </span>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-left">
+            <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-left">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
                 Estimated Net Tax Owed
               </span>
@@ -227,7 +227,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
           </div>
 
           {/* Calculator Control Inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 dark:bg-slate-850/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5">
+          <div className="app-card grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 dark:bg-slate-850/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5">
             
             {/* Column 1: Income & Tax Rate */}
             <div className="space-y-4">
@@ -436,7 +436,7 @@ Estimated Tax Payable: ${formatCurrency(estimatedTaxWithDeductions)}`;
           </div>
 
           {/* Breakdown Comparison Table */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden text-left">
+          <div className="app-card border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden text-left">
             <div className="bg-slate-50 dark:bg-slate-850 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Tax Calculation Summary

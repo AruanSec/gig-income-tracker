@@ -223,7 +223,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+        className="app-card w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         id="income-form-container"
       >
         {/* Header */}
@@ -251,7 +251,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Dates */}
-            <div className="space-y-4 md:col-span-2 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="app-card space-y-4 md:col-span-2 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Date & Time Period
               </span>
@@ -297,7 +297,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
             </div>
 
             {/* Performance metrics (Trips & Hours) */}
-            <div className="space-y-4 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="app-card space-y-4 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 flex items-center gap-1.5">
                 <Car className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Metrics & Times
               </span>
@@ -381,7 +381,7 @@ export default function IncomeForm({ entryToEdit, onSave, onCancel }: IncomeForm
             </div>
 
             {/* Financials (Net Fare, Tips, Taxes) */}
-            <div className="space-y-4 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="app-card space-y-4 bg-slate-50/50 dark:bg-slate-850/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-slate-400 flex items-center gap-1.5">
                 <Landmark className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Financial breakdown
               </span>

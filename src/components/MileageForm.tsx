@@ -159,7 +159,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+        className="app-card w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         id="mileage-form-container"
       >
         {/* Header */}
@@ -187,7 +187,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Primary Details (Date and Trip Type) */}
-            <div className="space-y-4 md:col-span-2 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
+            <div className="app-card space-y-4 md:col-span-2 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
               <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Date & Trip Type
               </span>
@@ -242,7 +242,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
             </div>
 
             {/* Odometer Metrics (Start, End) */}
-            <div className="space-y-4 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
+            <div className="app-card space-y-4 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
               <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                 <Compass className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Odometer Readings
               </span>
@@ -297,7 +297,7 @@ export default function MileageForm({ entryToEdit, onSave, onCancel }: MileageFo
             </div>
 
             {/* Purpose and Description */}
-            <div className="space-y-4 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
+            <div className="app-card space-y-4 bg-slate-100/60 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80">
               <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Trip Purpose & Details
               </span>

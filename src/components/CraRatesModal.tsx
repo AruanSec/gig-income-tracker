@@ -155,7 +155,7 @@ export default function CraRatesModal({ isOpen, onClose, rates, onSave }: CraRat
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
           {/* Informational Alert Box */}
-          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 leading-relaxed flex items-start gap-3">
+          <div className="app-card p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 leading-relaxed flex items-start gap-3">
             <ShieldAlert className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
             <p>
               The Canada Revenue Agency (CRA) sets the per-kilometre limits for tax-free automobile allowances each year.
@@ -171,14 +171,14 @@ export default function CraRatesModal({ isOpen, onClose, rates, onSave }: CraRat
               </h4>
 
               {error && (
-                <div className="p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+                <div className="app-card p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
               {success && (
-                <div className="p-3.5 bg-green-50 dark:bg-green-950/30 border border-green-100 dark:border-green-900/40 rounded-xl text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
+                <div className="app-card p-3.5 bg-green-50 dark:bg-green-950/30 border border-green-100 dark:border-green-900/40 rounded-xl text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                   <span>{success}</span>
                 </div>

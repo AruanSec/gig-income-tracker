@@ -173,7 +173,7 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6" id="monthly-income-bar-chart-card">
+    <div className="app-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6" id="monthly-income-bar-chart-card">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
         <div>
@@ -246,7 +246,7 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
           <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
             Total {selectedYear} Income
           </p>
@@ -258,7 +258,7 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
           </p>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
           <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
             Monthly Average
           </p>
@@ -270,7 +270,7 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
           </p>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
           <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider flex items-center gap-1">
             <Award className="w-3 h-3 text-amber-500" /> Peak Month
           </p>
@@ -282,7 +282,7 @@ export default function MonthlyIncomeBarChart({ entries }: MonthlyIncomeBarChart
           </p>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
+        <div className="app-card bg-slate-50 dark:bg-slate-850/60 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 text-left">
           <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
             Tips & Fares Mix
           </p>

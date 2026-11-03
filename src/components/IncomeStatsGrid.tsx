@@ -53,7 +53,7 @@ export default function IncomeStatsGrid({ stats }: IncomeStatsGridProps) {
       {/* Primary Hero Card - Total Earnings */}
       <motion.div
         variants={cardVariants}
-        className="p-5 bg-teal-950 dark:bg-teal-950 rounded-2xl border border-teal-900 shadow-lg shadow-teal-950/10 flex flex-col justify-between relative overflow-hidden group hover:border-teal-700 transition duration-350"
+        className="app-card p-5 bg-teal-950 dark:bg-teal-950 rounded-2xl border border-teal-900 shadow-lg shadow-teal-950/10 flex flex-col justify-between relative overflow-hidden group hover:border-teal-700 transition duration-350"
       >
         <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-24 h-24 bg-emerald-300/20 rounded-full blur-xl group-hover:scale-125 transition duration-500"></div>
         <div className="relative z-10">
@@ -80,7 +80,7 @@ export default function IncomeStatsGrid({ stats }: IncomeStatsGridProps) {
       {/* Hourly Earnings Rate */}
       <motion.div
         variants={cardVariants}
-        className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
+        className="app-card p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
       >
         <div>
           <div className="flex items-center justify-between">
@@ -107,7 +107,7 @@ export default function IncomeStatsGrid({ stats }: IncomeStatsGridProps) {
       {/* Average Earnings per Trip */}
       <motion.div
         variants={cardVariants}
-        className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
+        className="app-card p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
       >
         <div>
           <div className="flex items-center justify-between">
@@ -134,7 +134,7 @@ export default function IncomeStatsGrid({ stats }: IncomeStatsGridProps) {
       {/* Active Duty Efficiency */}
       <motion.div
         variants={cardVariants}
-        className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
+        className="app-card p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition duration-350"
       >
         <div>
           <div className="flex items-center justify-between">

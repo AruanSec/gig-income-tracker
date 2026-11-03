@@ -98,7 +98,7 @@ export default function IncomeList({ entries, onEdit, onDelete }: IncomeListProp
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden" id="income-list-card">
+    <div className="app-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden" id="income-list-card">
       
       {/* Controls: Search & Sorting Options */}
       <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 space-y-4">

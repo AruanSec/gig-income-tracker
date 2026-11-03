@@ -628,7 +628,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
       <p className="text-xs text-slate-500">Actual costs include recorded GST/HST; no input tax credit is automatically claimed or subtracted. Estimates exclude CPP, tax credits and progressive tax brackets.</p>
 
       {/* 1. Header with Period Selectors */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
             <Calculator className="w-4 h-4" />
@@ -683,7 +683,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                       {/* Left Controls: Period Selection */}
-                      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-2">
+                      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-2">
                         <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" /> Filter Accounting Period
                         </h3>
@@ -807,7 +807,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                       </div>
 
                       {/* Right Controls: Interactive Tax Sliders */}
-                      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
+                      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
                         <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-blue-500" /> Interactive Tax Estimators
                         </h3>
@@ -869,7 +869,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
                       {/* Gross Income Card */}
-                      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 dark:border-slate-950 text-left space-y-1 relative group/gross cursor-help">
+                      <div className="app-card bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 dark:border-slate-950 text-left space-y-1 relative group/gross cursor-help">
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gross Platform Revenue</p>
                           <HelpCircle className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 transition shrink-0" />
@@ -886,7 +886,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                       </div>
 
                       {/* Allowed Deductions Card */}
-                      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/deduct cursor-help">
+                      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/deduct cursor-help">
                         <div className="absolute top-2.5 right-2.5 bg-blue-50 dark:bg-blue-950/60 text-[8px] font-black text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-0.5 border border-blue-100 dark:border-blue-900/50">
                           <CheckCircle2 className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
                           Optimized
@@ -907,7 +907,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                       </div>
 
                       {/* Estimated Profit / Loss Card */}
-                      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/net cursor-help">
+                      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/net cursor-help">
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Profit / Loss</p>
                           <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 transition shrink-0" />
@@ -926,7 +926,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                       </div>
 
                       {/* Estimated Income Taxes Card */}
-                      <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/tax cursor-help">
+                      <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 text-left space-y-1 relative group/tax cursor-help">
                         <div className="flex items-center justify-between">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Est. Taxes Owed</p>
                           <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 transition shrink-0" />
@@ -951,7 +951,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 return (
                   <SortableDashboardSection key="trend-chart" id="trend-chart" headerLabel="6-Month Performance Trend">
                     {/* 6-Month Net Profit Trend Line Chart */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 text-left">
+                    <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 text-left">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -1029,7 +1029,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 return (
                   <SortableDashboardSection key="seasonal-breakdown" id="seasonal-breakdown" headerLabel="Seasonal Trend Analysis">
                     {/* NEW: Monthly Revenue vs. Total Expenses Seasonal Breakdown */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-5 text-left" id="monthly-seasonal-breakdown-section">
+                    <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-5 text-left" id="monthly-seasonal-breakdown-section">
 
         {/* Header & Year Selector */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -1064,7 +1064,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
         {/* 3 Seasonal High-level Metric Badges */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Peak Revenue Month */}
-          <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-150 dark:border-emerald-900/40 rounded-xl p-3.5 flex items-center justify-between">
+          <div className="app-card bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-150 dark:border-emerald-900/40 rounded-xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <Sun className="w-3 h-3 text-amber-500" /> Peak Revenue Month
@@ -1082,7 +1082,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
           </div>
 
           {/* Peak Expenses Month */}
-          <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-150 dark:border-amber-900/40 rounded-xl p-3.5 flex items-center justify-between">
+          <div className="app-card bg-amber-50/50 dark:bg-amber-950/20 border border-amber-150 dark:border-amber-900/40 rounded-xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
                 <Snowflake className="w-3 h-3 text-blue-400" /> Highest Expense Month
@@ -1100,7 +1100,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
           </div>
 
           {/* Most Profitable Month */}
-          <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-150 dark:border-blue-900/40 rounded-xl p-3.5 flex items-center justify-between">
+          <div className="app-card bg-blue-50/50 dark:bg-blue-950/20 border border-blue-150 dark:border-blue-900/40 rounded-xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1">
                 <Flame className="w-3 h-3 text-orange-500" /> Most Profitable Month
@@ -1169,7 +1169,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
             {monthlyBreakdownData.quarterly.map((q) => (
               <div
                 key={q.quarter}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3.5 space-y-2 text-xs"
+                className="app-card bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3.5 space-y-2 text-xs"
               >
                 <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 pb-1.5">
                   <span className="font-extrabold text-slate-800 dark:text-slate-100 font-mono">{q.quarter} ({q.label})</span>
@@ -1346,7 +1346,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Left Side: Comparison of claim methods */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-8">
+        <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-8">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Scale className="w-3.5 h-3.5 text-blue-500" /> Comparison of Planning Methods
@@ -1435,7 +1435,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
           </div>
 
           {/* Expert Tip box */}
-          <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/40 p-3.5 rounded-xl text-left flex gap-2.5 items-start">
+          <div className="app-card bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/40 p-3.5 rounded-xl text-left flex gap-2.5 items-start">
             <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="text-xs font-black text-emerald-950 dark:text-emerald-300">Choose an Eligible Method</p>
@@ -1447,7 +1447,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
         </div>
 
         {/* Right Side: GST/HST Input Tax Credits (ITC) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-4 flex flex-col justify-between">
+        <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-4 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -1456,7 +1456,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
             </div>
 
             {/* ITC Stat display */}
-            <div className="bg-blue-50/20 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl text-center space-y-1">
+            <div className="app-card bg-blue-50/20 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl text-center space-y-1">
               <p className="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">Tracked GST/HST Paid</p>
               <p className="text-3xl font-black text-blue-600 dark:text-blue-450 font-mono">{formatCurrency(stats.gstHstTotal)}</p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-1.5">Tracked tax amounts before eligibility and business-use review</p>
@@ -1486,7 +1486,7 @@ export default function TaxProfitSummary({ entries, mileageEntries, expenses, cr
                 return (
                   <SortableDashboardSection key="itemized-ledger" id="itemized-ledger" headerLabel="Statement Supporting Ledger">
                     {/* 5. Itemized Ledger Checklist */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="app-card bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
         <h3 className="text-xs font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-slate-400" /> Statement Supporting Ledger ({filteredData.entries.length} Shifts, {filteredData.expenses.length} Expenses)
         </h3>

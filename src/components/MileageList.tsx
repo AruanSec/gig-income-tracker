@@ -119,7 +119,7 @@ export default function MileageList({ entries, allEntries = entries, onEdit, onD
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs h-full flex flex-col" id="mileage-list-card">
+    <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs h-full flex flex-col" id="mileage-list-card">
       
       {/* Search and Filters Header */}
       <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/10 dark:bg-slate-900/50 space-y-3 shrink-0">
@@ -229,7 +229,7 @@ export default function MileageList({ entries, allEntries = entries, onEdit, onD
                 return (
                   <div
                     key={entry.id}
-                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                    className="app-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                     id={`mileage-card-${entry.id}`}
                   >
                     <div>

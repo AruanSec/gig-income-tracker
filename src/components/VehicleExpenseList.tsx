@@ -114,7 +114,7 @@ export default function VehicleExpenseList({ expenses, onEdit, onDelete, onAddTr
   }, [filteredExpenses]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs h-full flex flex-col" id="expense-list-card">
+    <div className="app-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs h-full flex flex-col" id="expense-list-card">
       
       {/* Search and Filters Header */}
       <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/10 dark:bg-slate-900/40 space-y-4 shrink-0">
@@ -274,7 +274,7 @@ export default function VehicleExpenseList({ expenses, onEdit, onDelete, onAddTr
                 {period.expenses.map((exp) => (
                   <div 
                     key={exp.id} 
-                    className="bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="app-card bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 rounded-xl p-3.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     id={`expense-row-${exp.id}`}
                   >
                     <div className="space-y-1.5 flex-1 min-w-0">

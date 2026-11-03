@@ -73,7 +73,7 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
 
   if (sortedEntries.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+      <div className="app-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
         <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 mb-3">
           <BarChart2 className="w-6 h-6" />
         </div>
@@ -138,7 +138,7 @@ export default function IncomeChart({ entries }: IncomeChartProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4" id="chart-card">
+    <div className="app-card bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4" id="chart-card">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
